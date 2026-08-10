@@ -2,249 +2,133 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Moon, Sun } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import LogoutButton from "@/components/LogoutButton";
-import AdminClientsTable from "@/components/AdminClientsTable";
-import AdminAccountsPanel from "@/components/AdminAccountsPanel";
-import AdminBalancesPanel from "@/components/AdminBalancesPanel";
-import AdminProductsPanel from "@/components/AdminProductsPanel";
-import AdminTransactionsPanel from "@/components/AdminTransactionsPanel";
-import AdminDashboardMetrics from "@/components/AdminDashboardMetrics";
-import AdminSecurityPanel from "@/components/AdminSecurityPanel";
+import { SecurityProvider, useSecurity } from "@/components/SecurityContext";
+import { LayoutDashboard, Users, ArrowRightLeft, Wallet, Shield } from "lucide-react";
+
 
 type AdminDashboardShellProps = {
   adminName: string;
-  showClients?: boolean;
-  showProducts?: boolean;
-  showAccounts?: boolean;
-  showTransactions?: boolean;
-  showBalances?: boolean;
-  showBackToDashboard?: boolean;
-  showSecurity?: boolean;
+  children: React.ReactNode;
 };
 
-export default function AdminDashboardShell({
+export default function AdminDashboardShell(props: AdminDashboardShellProps) {
+  return (
+    <SecurityProvider>
+      <AdminDashboardShellInner {...props} />
+    </SecurityProvider>
+  );
+}
+
+function AdminDashboardShellInner({
   adminName,
-  showClients = false,
-  showProducts = true,
-  showAccounts = true,
-  showTransactions = false,
-  showBalances = false,
-  showBackToDashboard = false,
-  showSecurity = false,
+  children,
 }: AdminDashboardShellProps) {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const [productsRevision, setProductsRevision] = useState(0);
-  const [permissions, setPermissions] = useState<string[] | null>(null);
-  const [roleName, setRoleName] = useState("");
-  const isDark = theme === "dark";
+  const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+  const { permissions, roleName } = useSecurity();
+  const { theme } = useTheme();
+  const isDark = theme !== "light";
 
   useEffect(() => {
-    const loadPermissions = async () => {
-      try {
-        const response = await fetch("/api/admin/security/me", { method: "GET", cache: "no-store" });
-        const result = await response.json();
-        if (response.ok && result?.success) {
-          setPermissions(Array.isArray(result.data?.permissions) ? result.data.permissions : []);
-          setRoleName(String(result.data?.roleName ?? ""));
-        } else {
-          setPermissions([]);
-          setRoleName("");
-        }
-      } catch {
-        setPermissions([]);
-        setRoleName("");
-      }
-    };
-
-    loadPermissions();
+    setMounted(true);
   }, []);
 
   const permissionSet = useMemo(() => new Set(permissions ?? []), [permissions]);
-  const canViewDashboard = permissionSet.has("view_dashboard") && roleName !== "Officer";
+  const normalizedRoleName = (roleName || "").trim().toLowerCase();
+  
+  const canViewDashboard = permissionSet.has("view_dashboard") && normalizedRoleName !== "officer";
   const canViewClients = permissionSet.has("view_clients");
-  const canViewProducts = permissionSet.has("view_products");
-  const canViewAccounts = permissionSet.has("view_accounts");
   const canViewTransactions = permissionSet.has("view_transactions");
   const canViewSecurity =
     permissionSet.has("view_users") || permissionSet.has("view_roles") || permissionSet.has("edit_roles");
-  const canViewBalances = roleName === "Manager" || roleName === "Super Admin";
+  const canViewBalances = normalizedRoleName === "manager" || normalizedRoleName === "super admin";
 
-  const showClientsSection = showClients && canViewClients;
-  const showProductsSection = showProducts && canViewProducts;
-  const showAccountsSection = showAccounts && canViewAccounts;
-  const showTransactionsSection = showTransactions && canViewTransactions;
-  const showBalancesSection = showBalances && canViewBalances;
-  const showSecuritySection = showSecurity && canViewSecurity;
+  const navLinkClass = (isActive: boolean) =>
+    `flex items-center gap-3 w-full rounded-r-xl px-4 py-3 text-sm font-semibold transition-all duration-300 border-l-2 ${
+      isActive
+        ? (isDark ? "bg-white/5 text-[#B6FF00] border-[#B6FF00] shadow-[inset_8px_0_16px_rgba(182,255,0,0.08)]" : "bg-[#ECFDF5] text-[#10B981] border-[#10B981] shadow-[inset_4px_0_12px_rgba(16,185,129,0.05)]")
+        : (isDark ? "border-transparent text-[#9eb4b0] hover:bg-white/5 hover:text-[#d9ece9]" : "border-transparent text-[#475569] hover:bg-[#F8FAFC] hover:text-[#0F172A]")
+    }`;
+
+  if (!mounted) {
+    return null; // Return null on server-side and before hydration
+  }
 
   return (
-    <main
-      className={`relative min-h-screen overflow-hidden px-4 py-10 transition-colors duration-300 ${
-        isDark ? "bg-[#040b10]" : "bg-[#eef8f6]"
-      }`}
-    >
-      <div
-        className={`pointer-events-none absolute inset-0 ${
-          isDark
-            ? "bg-[radial-gradient(circle_at_10%_10%,rgba(45,199,184,0.24),transparent_45%),radial-gradient(circle_at_85%_70%,rgba(255,159,67,0.18),transparent_40%),linear-gradient(to_bottom,#061018,#03070a)]"
-            : "bg-[radial-gradient(circle_at_10%_10%,rgba(26,150,139,0.2),transparent_45%),radial-gradient(circle_at_85%_70%,rgba(224,143,61,0.16),transparent_40%),linear-gradient(to_bottom,#f8fffd,#e4f2ef)]"
-        }`}
-      />
+    <main className={`relative flex min-h-screen overflow-hidden transition-colors duration-300 ${isDark ? "bg-[#040b10]" : "bg-gradient-to-br from-[#FCFCFD] to-[#F1F5F9]"}`}>
+      <div className={`pointer-events-none absolute inset-0 ${isDark ? "bg-[radial-gradient(circle_at_10%_10%,rgba(45,199,184,0.15),transparent_45%),radial-gradient(circle_at_85%_70%,rgba(182,255,0,0.05),transparent_40%),linear-gradient(to_bottom,#061018,#03070a)]" : "hidden"}`} />
       <div className="pointer-events-none absolute inset-0">
         <Image
           src="/bank.jpg"
           alt="Money background"
           fill
           priority
-          className={`bank-bg-drift object-cover object-center ${
-            isDark ? "opacity-14 mix-blend-screen" : "opacity-20 mix-blend-multiply"
-          }`}
+          className={`bank-bg-drift object-cover object-center transition-all duration-700 ${isDark ? "opacity-10 mix-blend-screen" : "opacity-15 mix-blend-multiply"}`}
         />
       </div>
-      <div
-        className={`pointer-events-none absolute inset-0 ${
-          isDark
-            ? "bg-[radial-gradient(circle_at_50%_35%,transparent_20%,rgba(2,8,12,0.62)_80%)]"
-            : "bg-[radial-gradient(circle_at_50%_35%,transparent_20%,rgba(224,241,237,0.66)_80%)]"
-        }`}
-      />
-      <div
-        className={`pointer-events-none absolute inset-0 opacity-30 ${
-          isDark
-            ? "bg-[linear-gradient(rgba(109,168,176,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(109,168,176,0.1)_1px,transparent_1px)]"
-            : "bg-[linear-gradient(rgba(46,111,108,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(46,111,108,0.1)_1px,transparent_1px)]"
-        } bank-grid-shift bg-size-[60px_60px]`}
-      />
+      <div className={`pointer-events-none absolute inset-0 ${isDark ? "bg-[radial-gradient(circle_at_50%_35%,transparent_20%,rgba(2,8,12,0.7)_80%)]" : "hidden"}`} />
+      <div className={`pointer-events-none absolute inset-0 opacity-20 ${isDark ? "bg-[linear-gradient(rgba(109,168,176,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(109,168,176,0.1)_1px,transparent_1px)]" : "bg-[linear-gradient(rgba(15,23,42,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(15,23,42,0.03)_1px,transparent_1px)]"} bank-grid-shift bg-size-[60px_60px]`} />
 
-      <div
-        className={`bank-float pointer-events-none absolute right-8 top-28 hidden w-72 rounded-2xl border p-4 shadow-2xl backdrop-blur-lg xl:block ${
-          isDark ? "border-[#223745] bg-[#08131b]/88" : "border-[#aecfca] bg-[#f8fffd]/90"
-        }`}
-      >
-        <p className={`text-xs font-semibold uppercase tracking-[0.24em] ${isDark ? "text-[#8bc6c0]" : "text-[#30716a]"}`}>
-          Portfolio Health
-        </p>
-        <div className="mt-3 space-y-2">
-          {[
-            { label: "Active Accounts", value: "94%", width: "w-[94%]", color: "bg-[#2dc7b8]" },
-            { label: "KYC Verified", value: "88%", width: "w-[88%]", color: "bg-[#58b7f0]" },
-            { label: "Risk Cleared", value: "79%", width: "w-[79%]", color: "bg-[#ff9f43]" },
-          ].map((item) => (
-            <div key={item.label} className="space-y-1">
-              <div className="flex items-center justify-between text-xs">
-                <span className={isDark ? "text-[#adc7c4]" : "text-[#3d6764]"}>{item.label}</span>
-                <span className={isDark ? "text-[#d9ece9]" : "text-[#1a4649]"}>{item.value}</span>
-              </div>
-              <div className={`h-1.5 rounded-full ${isDark ? "bg-[#12242f]" : "bg-[#d9ebe8]"}`}>
-                <div className={`h-full rounded-full ${item.width} ${item.color}`} />
-              </div>
-            </div>
-          ))}
+      <aside className={`relative z-20 flex w-72 flex-col border-r backdrop-blur-xl p-6 transition-all ${isDark ? "border-[#1f2d32] bg-[#040b10]/60" : "border-[#E2E8F0] bg-white shadow-[4px_0_24px_rgba(0,0,0,0.02)]"}`}>
+        <div className="mb-10">
+          <p className={`text-[10px] font-bold uppercase tracking-[0.24em] ${isDark ? "text-[#B6FF00]" : "text-[#10B981]"}`}>
+            Mini Core Banking
+          </p>
+          <h1 className={`mt-2 text-2xl font-bold leading-tight ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]" : "text-[#0F172A]"}`}>
+            Admin Dashboard
+          </h1>
+          <p className={`mt-1.5 text-xs ${isDark ? "text-[#9eb4b0]" : "text-[#475569]"}`}>
+            Welcome back, {adminName}
+          </p>
         </div>
-      </div>
 
-      <section className="relative z-10 mx-auto w-full max-w-6xl">
-        <header
-          className={`mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 backdrop-blur-md ${
-            isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#b6d3ce] bg-[#f5fffd]/90"
-          }`}
-        >
-          <div>
-            <p className={`text-xs font-semibold uppercase tracking-[0.28em] ${isDark ? "text-[#8ed7cf]" : "text-[#2d7a72]"}`}>
-              LITTLE Mini Banking System
-            </p>
-            <h1 className={`mt-1 text-3xl font-bold ${isDark ? "text-[#f6fffd]" : "text-[#123a3f]"}`}>Admin Dashboard</h1>
-            <p className={`mt-1 text-sm ${isDark ? "text-[#9eb4b0]" : "text-[#527471]"}`}>Welcome back {adminName}</p>
-          </div>
+        <nav className="flex-1 space-y-2 overflow-y-auto pr-2 custom-scrollbar">
+          {canViewDashboard ? (
+            <Link href="/dashboard" className={navLinkClass(pathname === "/dashboard")}>
+              <LayoutDashboard size={18} />
+              Dashboard
+            </Link>
+          ) : null}
+          {canViewClients ? (
+            <Link href="/dashboard/clients" className={navLinkClass(pathname === "/dashboard/clients")}>
+              <Users size={18} />
+              Clients
+            </Link>
+          ) : null}
+          {canViewTransactions ? (
+            <Link href="/dashboard/transactions" className={navLinkClass(pathname === "/dashboard/transactions")}>
+              <ArrowRightLeft size={18} />
+              Transactions
+            </Link>
+          ) : null}
+          {canViewBalances ? (
+            <Link href="/dashboard/balance" className={navLinkClass(pathname === "/dashboard/balance")}>
+              <Wallet size={18} />
+              Balances
+            </Link>
+          ) : null}
+          {canViewSecurity ? (
+            <Link href="/dashboard/security" className={navLinkClass(pathname === "/dashboard/security")}>
+              <Shield size={18} />
+              Security
+            </Link>
+          ) : null}
+        </nav>
 
-          <div className="flex items-center gap-2">
-            {showBackToDashboard ? (
-              <Link
-                href="/dashboard"
-                className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                  isDark
-                    ? "border-[#35535b] bg-[#10252d] text-[#b9d9d4] hover:bg-[#183641]"
-                    : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-                }`}
-              >
-                Dashboard
-              </Link>
-            ) : null}
-            {canViewClients ? (
-              <Link
-                href="/dashboard/clients"
-                className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                  isDark
-                    ? "border-[#35535b] bg-[#10252d] text-[#b9d9d4] hover:bg-[#183641]"
-                    : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-                }`}
-              >
-                Clients
-              </Link>
-            ) : null}
-            {canViewTransactions ? (
-              <Link
-                href="/dashboard/transactions"
-                className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                  isDark
-                    ? "border-[#35535b] bg-[#10252d] text-[#b9d9d4] hover:bg-[#183641]"
-                    : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-                }`}
-              >
-                Transactions
-              </Link>
-            ) : null}
-            {canViewBalances ? (
-              <Link
-                href="/dashboard/balance"
-                className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                  isDark
-                    ? "border-[#35535b] bg-[#10252d] text-[#b9d9d4] hover:bg-[#183641]"
-                    : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-                }`}
-              >
-                Balances
-              </Link>
-            ) : null}
-            {canViewSecurity ? (
-              <Link
-                href="/dashboard/security"
-                className={`rounded-xl border px-3 py-2 text-sm font-semibold transition-colors ${
-                  isDark
-                    ? "border-[#35535b] bg-[#10252d] text-[#b9d9d4] hover:bg-[#183641]"
-                    : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-                }`}
-              >
-                Security
-              </Link>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => setTheme(isDark ? "light" : "dark")}
-              aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              title={isDark ? "Light mode" : "Dark mode"}
-              className={`rounded-xl border p-2.5 transition-colors ${
-                isDark
-                  ? "border-[#35535b] bg-[#10252d] text-[#b9d9d4] hover:bg-[#183641]"
-                  : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-              }`}
-            >
-              {isDark ? <Sun size={18} strokeWidth={2.2} /> : <Moon size={18} strokeWidth={2.2} />}
-            </button>
-            <LogoutButton />
-          </div>
-        </header>
+        <div className={`mt-6 flex items-center justify-between border-t pt-6 ${isDark ? "border-[#1f2d32]" : "border-[#E2E8F0]"}`}>
+          <LogoutButton />
+        </div>
+      </aside>
 
-        {canViewDashboard ? <AdminDashboardMetrics theme={theme} /> : null}
-        {showClientsSection ? <AdminClientsTable theme={theme} /> : null}
-        {showProductsSection ? (
-          <AdminProductsPanel theme={theme} onProductCreated={() => setProductsRevision((prev) => prev + 1)} />
-        ) : null}
-        {showAccountsSection ? <AdminAccountsPanel theme={theme} refreshKey={productsRevision} /> : null}
-        {showTransactionsSection ? <AdminTransactionsPanel theme={theme} /> : null}
-        {showBalancesSection ? <AdminBalancesPanel theme={theme} /> : null}
-        {showSecuritySection ? <AdminSecurityPanel theme={theme} /> : null}
+      <section className="relative z-10 flex-1 h-screen overflow-y-auto p-6 md:p-10 custom-scrollbar">
+        <div className="mx-auto w-full max-w-7xl relative">
+
+          {children}
+        </div>
       </section>
     </main>
   );

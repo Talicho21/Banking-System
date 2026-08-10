@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       ORDER BY a.created_at DESC
       LIMIT ?
       `,
-      [status, status, productId, productId, search, search, search, limit]
+      [status, status, productId, productId, search, search, search, String(limit)]
     );
 
     const data = (rows ?? []).map((row: any) => ({

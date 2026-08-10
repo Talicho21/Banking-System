@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
         search,
         search,
         search,
-        limit,
+        String(limit),
       ]
     );
 
@@ -109,6 +109,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
+    console.error("CLIENTS API ERROR:", error);
     return NextResponse.json(
       { success: false, error: error?.message ?? "Failed to fetch clients." },
       { status: 500 }

@@ -9,14 +9,14 @@ export const getSessionFromRequest = (request: NextRequest) => {
 };
 
 const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
-  Officer: [
+  officer: [
     "view_clients",
     "view_accounts",
     "view_transactions",
     "post_cash",
     "post_transfer",
   ],
-  "Super Admin": [
+  "super admin": [
     "view_dashboard",
     "view_clients",
     "edit_client",
@@ -38,7 +38,7 @@ const ROLE_DEFAULT_PERMISSIONS: Record<string, string[]> = {
     "view_roles",
     "edit_roles",
   ],
-  Manager: [
+  manager: [
     "view_clients",
     "edit_client",
     "view_accounts",
@@ -59,7 +59,8 @@ export const getDefaultPermissionsForRole = (roleName: string | null) => {
   if (!roleName) {
     return [];
   }
-  return ROLE_DEFAULT_PERMISSIONS[roleName] ?? [];
+  const normalizedRole = roleName.trim().toLowerCase();
+  return ROLE_DEFAULT_PERMISSIONS[normalizedRole] ?? [];
 };
 
 export const getRoleNameById = async (roleId: number) => {

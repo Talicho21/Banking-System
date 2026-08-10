@@ -2,6 +2,7 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { Building2, CheckCircle2, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { useTheme } from "next-themes";
 
 type RegistrationFormProps = {
   theme: "dark" | "light";
@@ -15,7 +16,8 @@ export default function RegistrationForm({ theme }: RegistrationFormProps) {
   const [submitError, setSubmitError] = useState("");
   const dobInputRef = useRef<HTMLInputElement>(null);
   const incorpDateInputRef = useRef<HTMLInputElement>(null);
-  const isDark = theme === "dark";
+  const { theme: nextTheme } = useTheme();
+  const isDark = nextTheme !== "light";
 
   const formatDateInputValue = (date: Date) => {
     const year = date.getFullYear();

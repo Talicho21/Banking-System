@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useToast, ToastContainer } from "@/components/Toast";
+import { useTheme } from "next-themes";
 
 type CategoryFilter = "All" | "Individual" | "Non-Individual";
 type StatusFilter = "All" | "Active" | "Inactive" | "Suspended";
@@ -58,7 +60,8 @@ const toDateInputValue = (value: string | null) => {
 };
 
 export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
-  const isDark = theme === "dark";
+  const { theme: nextTheme } = useTheme();
+  const isDark = nextTheme !== "light";
   const [category, setCategory] = useState<CategoryFilter>("All");
   const [status, setStatus] = useState<StatusFilter>("All");
   const [search, setSearch] = useState("");
@@ -70,6 +73,7 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
   const [editingClient, setEditingClient] = useState<ClientRow | null>(null);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const { toasts, success: toastSuccess, error: toastError, dismiss } = useToast();
 
   const fetchClients = async () => {
     setLoading(true);
@@ -128,10 +132,11 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
     const result = await response.json();
 
     if (!response.ok || !result.success) {
-      alert(result.error ?? "Delete failed.");
+      toastError(result.error ?? "Delete failed.");
       return;
     }
 
+    toastSuccess("✓ Client deleted.");
     await fetchClients();
   };
 
@@ -146,10 +151,11 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
     const result = await response.json();
 
     if (!response.ok || !result.success) {
-      alert(result.error ?? "Status update failed.");
+      toastError(result.error ?? "Status update failed.");
       return;
     }
 
+    toastSuccess("✓ Client status updated.");
     await fetchClients();
   };
 
@@ -212,14 +218,15 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
       const result = await response.json();
 
       if (!response.ok || !result.success) {
-        alert(result.error ?? "Update failed.");
+        toastError(result.error ?? "Update failed.");
         return;
       }
 
+      toastSuccess("✓ Client details updated.");
       closeEditModal();
       await fetchClients();
     } catch {
-      alert("Update failed.");
+      toastError("Update failed.");
     } finally {
       setSavingEdit(false);
     }
@@ -229,126 +236,101 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
     return `${clients.length} result${clients.length === 1 ? "" : "s"}`;
   }, [clients.length]);
 
-  const cardBase = isDark ? "border-[#27464e] bg-[#0a1f27]/90" : "border-[#a8cdc8] bg-[#f3fffd]/95";
-  const cardTitle = isDark ? "text-[#80bab3]" : "text-[#317a72]";
-  const cardValue = isDark ? "text-[#dffbf7]" : "text-[#124247]";
-  const cardText = isDark ? "text-[#9db8b4]" : "text-[#5a7f7b]";
-  const panel = isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#b6d3ce] bg-[#f5fffd]/90";
-  const heading = isDark ? "text-[#f2fffd]" : "text-[#123a3f]";
-  const badge = isDark ? "border-[#27464e] bg-[#0d232b] text-[#8eb8b2]" : "border-[#a7cfc9] bg-[#ebf9f7] text-[#386f68]";
-  const field = isDark
-    ? "border-[#22414d] bg-[#0a2029] text-[#e6f4f2] focus:border-[#2dc7b8]"
-    : "border-[#a6cbc6] bg-[#fbfffe] text-[#173d42] focus:border-[#1ea696]";
-  const tableHead = isDark ? "border-[#1d323a] text-[#8eb8b2]" : "border-[#c6dedb] text-[#4a7570]";
-  const tableBody = isDark ? "text-[#d9efeb]" : "text-[#234f53]";
-  const tableRow = isDark ? "border-[#14262d]" : "border-[#d5e8e5]";
-  const emptyText = isDark ? "text-[#9db8b4]" : "text-[#5a7f7b]";
-  const statusSelectClass = isDark
-    ? "rounded-lg border border-[#2b4c57] bg-[#102932] px-2 py-1 text-xs text-[#dffbf7] outline-none"
-    : "rounded-lg border border-[#9ec7c2] bg-[#fbfffe] px-2 py-1 text-xs text-[#1e4f52] outline-none";
-  const saveBtnClass = isDark
-    ? "rounded-lg border border-[#2f5963] bg-[#10303a] px-3 py-1 text-xs font-semibold text-[#9febe3] transition-colors hover:bg-[#16404d]"
-    : "rounded-lg border border-[#8dc0b9] bg-[#e9f9f6] px-3 py-1 text-xs font-semibold text-[#16534c] transition-colors hover:bg-[#ddf2ee]";
-  const deleteBtnClass = isDark
-    ? "rounded-lg border border-red-600/50 bg-red-700/20 px-3 py-1 text-xs font-semibold text-red-200 transition-colors hover:bg-red-700/35"
-    : "rounded-lg border border-red-300 bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-200";
-  const editBtnClass = isDark
-    ? "rounded-lg border border-[#406089] bg-[#122339] px-3 py-1 text-xs font-semibold text-[#bfddff] transition-colors hover:bg-[#1b3452]"
-    : "rounded-lg border border-[#abc9ec] bg-[#eaf4ff] px-3 py-1 text-xs font-semibold text-[#1f4c7a] transition-colors hover:bg-[#dbeafc]";
-
   return (
     <>
       <div className="grid gap-4 md:grid-cols-3">
-        <article className={`rounded-2xl border p-5 ${cardBase}`}>
-          <p className={`text-xs uppercase tracking-[0.2em] ${cardTitle}`}>Total Clients</p>
-          <p className={`mt-3 text-3xl font-bold ${cardValue}`}>{meta.totalClients}</p>
-          <p className={`mt-1 text-sm ${cardText}`}>Across all categories</p>
+        <article className="glass-panel rounded-2xl p-6 transition-all hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(182,255,0,0.1)]">
+          <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Total Clients</p>
+          <p className={`mt-3 text-4xl font-light tracking-tight ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]" : "text-[#0F172A]"}`}>{meta.totalClients}</p>
+          <p className={`mt-2 text-xs ${isDark ? "text-[#527471]" : "text-[#94A3B8]"}`}>Across all categories</p>
         </article>
 
-        <article className={`rounded-2xl border p-5 ${cardBase}`}>
-          <p className={`text-xs uppercase tracking-[0.2em] ${cardTitle}`}>Individual</p>
-          <p className={`mt-3 text-3xl font-bold ${cardValue}`}>{meta.totalIndividuals}</p>
-          <p className={`mt-1 text-sm ${cardText}`}>Personal client records</p>
+        <article className="glass-panel rounded-2xl p-6 transition-all hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(182,255,0,0.1)]">
+          <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Individual</p>
+          <p className={`mt-3 text-4xl font-light tracking-tight ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]" : "text-[#0F172A]"}`}>{meta.totalIndividuals}</p>
+          <p className={`mt-2 text-xs ${isDark ? "text-[#527471]" : "text-[#94A3B8]"}`}>Personal client records</p>
         </article>
 
-        <article className={`rounded-2xl border p-5 ${cardBase}`}>
-          <p className={`text-xs uppercase tracking-[0.2em] ${cardTitle}`}>Non-Individual</p>
-          <p className={`mt-3 text-3xl font-bold ${cardValue}`}>{meta.totalNonIndividuals}</p>
-          <p className={`mt-1 text-sm ${cardText}`}>Organizations and entities</p>
+        <article className="glass-panel rounded-2xl p-6 transition-all hover:-translate-y-1 hover:shadow-[0_8px_32px_rgba(182,255,0,0.1)]">
+          <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Non-Individual</p>
+          <p className={`mt-3 text-4xl font-light tracking-tight ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]" : "text-[#0F172A]"}`}>{meta.totalNonIndividuals}</p>
+          <p className={`mt-2 text-xs ${isDark ? "text-[#527471]" : "text-[#94A3B8]"}`}>Organizations and entities</p>
         </article>
       </div>
 
-      <section className={`mt-6 rounded-2xl border p-5 backdrop-blur-md ${panel}`}>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className={`text-lg font-semibold ${heading}`}>Client Tables</h2>
-          <span className={`rounded-full border px-3 py-1 text-xs ${badge}`}>{filteredLabel}</span>
+      <section className="mt-6 glass-panel rounded-2xl p-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h2 className={`text-lg font-semibold ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]"}`}>Client Directory</h2>
+          <span className={`rounded-full border px-3 py-1 text-xs ${isDark ? "border-white/10 bg-[#0d232b] text-[#8ed7cf]" : "border-[#E2E8F0] bg-[#F1F5F9] text-[#475569]"}`}>{filteredLabel}</span>
         </div>
 
-        <form onSubmit={onSearchSubmit} className="mb-4 grid gap-3 md:grid-cols-4">
+        <form onSubmit={onSearchSubmit} className="mb-6 grid gap-4 md:grid-cols-4">
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as CategoryFilter)}
-            className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+            className="glass-input rounded-xl p-3 text-sm"
           >
-            <option value="All">All Categories</option>
-            <option value="Individual">Individual Table</option>
-            <option value="Non-Individual">Non-Individual Table</option>
+            <option value="All" className={isDark ? "bg-[#040b10]" : "bg-white"}>All Categories</option>
+            <option value="Individual" className={isDark ? "bg-[#040b10]" : "bg-white"}>Individual</option>
+            <option value="Non-Individual" className={isDark ? "bg-[#040b10]" : "bg-white"}>Non-Individual</option>
           </select>
 
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as StatusFilter)}
-            className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+            className="glass-input rounded-xl p-3 text-sm"
           >
-            <option value="All">All Status</option>
-            <option value="Active">Active</option>
-            <option value="Inactive">Inactive</option>
-            <option value="Suspended">Suspended</option>
+            <option value="All" className={isDark ? "bg-[#040b10]" : "bg-white"}>All Status</option>
+            <option value="Active" className={isDark ? "bg-[#040b10]" : "bg-white"}>Active</option>
+            <option value="Inactive" className={isDark ? "bg-[#040b10]" : "bg-white"}>Inactive</option>
+            <option value="Suspended" className={isDark ? "bg-[#040b10]" : "bg-white"}>Suspended</option>
           </select>
 
           <input
             type="text"
-            placeholder="Search ID, name, org, reg no"
+            placeholder="Search ID, name, org..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+            className={`glass-input rounded-xl p-3 text-sm ${isDark ? "placeholder-white/30" : "placeholder-[#94A3B8]"}`}
           />
 
           <button
             type="submit"
-            className="rounded-xl bg-[#2dc7b8] px-4 py-3 text-sm font-semibold text-[#03272b] transition-colors hover:bg-[#43ded0]"
+            className="glass-button rounded-xl px-4 py-3 text-sm font-semibold tracking-wide"
           >
             Apply Filters
           </button>
         </form>
 
         {error ? (
-          <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">{error}</p>
+          <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">{error}</p>
         ) : null}
 
+        <ToastContainer toasts={toasts} dismiss={dismiss} />
+
         <div className="overflow-x-auto">
-          <table className="w-full min-w-190 border-collapse text-left text-sm">
+          <table className="w-full text-left text-sm">
             <thead>
-              <tr className={`border-b ${tableHead}`}>
-                <th className="px-3 py-2 font-medium">Client ID</th>
-                <th className="px-3 py-2 font-medium">Category</th>
-                <th className="px-3 py-2 font-medium">Name / Organization</th>
-                <th className="px-3 py-2 font-medium">Subtype</th>
-                <th className="px-3 py-2 font-medium">Registered</th>
-                <th className="px-3 py-2 font-medium">Status</th>
-                <th className="px-3 py-2 font-medium">Operations</th>
+              <tr className={`border-b ${isDark ? "border-white/5 text-[#8ed7cf]" : "border-[#E2E8F0] text-[#64748B]"}`}>
+                <th className="pb-3 pr-4 font-semibold">Client ID</th>
+                <th className="pb-3 pr-4 font-semibold">Category</th>
+                <th className="pb-3 pr-4 font-semibold">Name / Organization</th>
+                <th className="pb-3 pr-4 font-semibold">Subtype</th>
+                <th className="pb-3 pr-4 font-semibold">Registered</th>
+                <th className="pb-3 pr-4 font-semibold">Status</th>
+                <th className="pb-3 pr-4 font-semibold">Operations</th>
               </tr>
             </thead>
-            <tbody className={tableBody}>
+            <tbody className={isDark ? "text-[#9eb4b0]" : "text-[#475569]"}>
               {loading ? (
                 <tr>
-                  <td className={`px-3 py-6 ${emptyText}`} colSpan={7}>
+                  <td className="py-6 text-center text-xs opacity-60" colSpan={7}>
                     Loading clients...
                   </td>
                 </tr>
               ) : clients.length === 0 ? (
                 <tr>
-                  <td className={`px-3 py-6 ${emptyText}`} colSpan={7}>
+                  <td className="py-6 text-center text-xs opacity-60" colSpan={7}>
                     No clients found for your selection.
                   </td>
                 </tr>
@@ -364,13 +346,17 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
                       : client.nonIndividualSubType ?? "-";
 
                   return (
-                    <tr key={client.clientId} className={`border-b ${tableRow}`}>
-                      <td className="px-3 py-3">{client.clientId}</td>
-                      <td className="px-3 py-3">{client.clientCategory}</td>
-                      <td className="px-3 py-3">{displayName || "-"}</td>
-                      <td className="px-3 py-3">{subtype}</td>
-                      <td className="px-3 py-3">{new Date(client.registrationDate).toLocaleString()}</td>
-                      <td className="px-3 py-3">
+                    <tr key={client.clientId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
+                      <td className="py-3 pr-4">#{client.clientId}</td>
+                      <td className="py-3 pr-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] border ${isDark ? "bg-[#10252d] border-white/10 text-[#d9ece9]" : "bg-[#F1F5F9] border-[#E2E8F0] text-[#0F172A]"}`}>
+                          {client.clientCategory}
+                        </span>
+                      </td>
+                      <td className={`py-3 pr-4 font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{displayName || "-"}</td>
+                      <td className="py-3 pr-4">{subtype}</td>
+                      <td className="py-3 pr-4">{new Date(client.registrationDate).toLocaleDateString()}</td>
+                      <td className="py-3 pr-4">
                         <select
                           value={pendingStatusUpdate[client.clientId] ?? client.status}
                           onChange={(e) =>
@@ -379,33 +365,33 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
                               [client.clientId]: e.target.value as ClientStatus,
                             }))
                           }
-                          className={statusSelectClass}
+                          className="glass-input rounded-lg px-2 py-1.5 text-xs bg-transparent"
                         >
-                          <option value="Active">Active</option>
-                          <option value="Inactive">Inactive</option>
-                          <option value="Suspended">Suspended</option>
+                          <option value="Active" className={isDark ? "bg-[#040b10]" : "bg-white"}>Active</option>
+                          <option value="Inactive" className={isDark ? "bg-[#040b10]" : "bg-white"}>Inactive</option>
+                          <option value="Suspended" className={isDark ? "bg-[#040b10]" : "bg-white"}>Suspended</option>
                         </select>
                       </td>
-                      <td className="px-3 py-3">
+                      <td className="py-3 pr-4">
                         <div className="flex gap-2">
                           <button
                             type="button"
                             onClick={() => openEditModal(client)}
-                            className={editBtnClass}
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
                           >
                             Edit
                           </button>
                           <button
                             type="button"
                             onClick={() => updateStatus(client.clientId)}
-                            className={saveBtnClass}
+                            className="glass-button rounded-full px-3 py-1 text-xs font-semibold"
                           >
                             Save
                           </button>
                           <button
                             type="button"
                             onClick={() => deleteClient(client.clientId)}
-                            className={deleteBtnClass}
+                            className="rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-400 transition-colors hover:bg-red-500/20"
                           >
                             Delete
                           </button>
@@ -421,34 +407,28 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
       </section>
 
       {editingClient && editForm ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/55" onClick={closeEditModal} />
-          <section
-            className={`relative z-10 w-full max-w-xl rounded-2xl border p-5 backdrop-blur-xl ${
-              isDark ? "border-[#2a4450] bg-[#081822]/95" : "border-[#b8d2ce] bg-[#f9fffd]/95"
-            }`}
-          >
-            <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className={`absolute inset-0 backdrop-blur-sm ${isDark ? "bg-black/60" : "bg-[#0F172A]/20"}`} onClick={closeEditModal} />
+          <section className={`glass-panel relative z-10 w-full max-w-xl rounded-2xl p-6 ${isDark ? "" : "shadow-xl border-[#E2E8F0] bg-[#FFFFFF]"}`}>
+            <div className="mb-6 flex items-start justify-between gap-3">
               <div>
-                <p className={`text-xs uppercase tracking-[0.22em] ${isDark ? "text-[#8bc6c0]" : "text-[#317a72]"}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${isDark ? "text-[#B6FF00]" : "text-[#10B981]"}`}>
                   Edit Client
                 </p>
-                <h3 className={`mt-1 text-xl font-bold ${heading}`}>Client ID {editingClient.clientId}</h3>
+                <h3 className={`mt-1 text-xl font-bold ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]"}`}>Client ID #{editingClient.clientId}</h3>
               </div>
               <button
                 type="button"
                 onClick={closeEditModal}
-                className={`rounded-lg border px-2.5 py-1 text-sm ${
-                  isDark ? "border-[#35535b] text-[#b9d9d4]" : "border-[#a8c9c4] text-[#2b6460]"
-                }`}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
               >
                 Close
               </button>
             </div>
 
-            <form onSubmit={saveEdit} className="space-y-3">
+            <form onSubmit={saveEdit} className="space-y-4">
               <div>
-                <label className={`mb-1 block text-xs uppercase tracking-[0.2em] ${cardTitle}`}>Status</label>
+                <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Status</label>
                 <select
                   value={editForm.status}
                   onChange={(e) =>
@@ -461,142 +441,165 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
                         : prev
                     )
                   }
-                  className={`w-full rounded-xl border p-3 text-sm outline-none ${field}`}
+                  className="glass-input w-full rounded-xl p-3 text-sm"
                 >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Suspended">Suspended</option>
+                  <option value="Active" className={isDark ? "bg-[#040b10]" : "bg-white"}>Active</option>
+                  <option value="Inactive" className={isDark ? "bg-[#040b10]" : "bg-white"}>Inactive</option>
+                  <option value="Suspended" className={isDark ? "bg-[#040b10]" : "bg-white"}>Suspended</option>
                 </select>
               </div>
 
               {editingClient.clientCategory === "Individual" ? (
                 <>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <input
-                      type="text"
-                      placeholder="First Name"
-                      value={editForm.firstName}
-                      onChange={(e) =>
-                        setEditForm((prev) => (prev ? { ...prev, firstName: e.target.value } : prev))
-                      }
-                      className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-                      required
-                    />
-                    <input
-                      type="text"
-                      placeholder="Last Name"
-                      value={editForm.lastName}
-                      onChange={(e) =>
-                        setEditForm((prev) => (prev ? { ...prev, lastName: e.target.value } : prev))
-                      }
-                      className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-                      required
-                    />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>First Name</label>
+                      <input
+                        type="text"
+                        placeholder="First Name"
+                        value={editForm.firstName}
+                        onChange={(e) =>
+                          setEditForm((prev) => (prev ? { ...prev, firstName: e.target.value } : prev))
+                        }
+                        className="glass-input w-full rounded-xl p-3 text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Last Name</label>
+                      <input
+                        type="text"
+                        placeholder="Last Name"
+                        value={editForm.lastName}
+                        onChange={(e) =>
+                          setEditForm((prev) => (prev ? { ...prev, lastName: e.target.value } : prev))
+                        }
+                        className="glass-input w-full rounded-xl p-3 text-sm"
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <input
-                      type="date"
-                      value={editForm.dob}
-                      onChange={(e) =>
-                        setEditForm((prev) => (prev ? { ...prev, dob: e.target.value } : prev))
-                      }
-                      className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-                    />
-                    <select
-                      value={editForm.gender}
-                      onChange={(e) =>
-                        setEditForm((prev) =>
-                          prev
-                            ? {
-                                ...prev,
-                                gender: e.target.value as "Male" | "Female" | "Other",
-                              }
-                            : prev
-                        )
-                      }
-                      className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-                    >
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    <select
-                      value={editForm.individualSubType}
-                      onChange={(e) =>
-                        setEditForm((prev) => (prev ? { ...prev, individualSubType: e.target.value } : prev))
-                      }
-                      className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-                    >
-                      <option value="Individual">Individual Client</option>
-                      <option value="Minor">Minor</option>
-                      <option value="Group">Group</option>
-                      <option value="Staff">Staff</option>
-                    </select>
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div>
+                      <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Date of Birth</label>
+                      <input
+                        type="date"
+                        value={editForm.dob}
+                        onChange={(e) =>
+                          setEditForm((prev) => (prev ? { ...prev, dob: e.target.value } : prev))
+                        }
+                        className="glass-input w-full rounded-xl p-3 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Gender</label>
+                      <select
+                        value={editForm.gender}
+                        onChange={(e) =>
+                          setEditForm((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  gender: e.target.value as "Male" | "Female" | "Other",
+                                }
+                              : prev
+                          )
+                        }
+                        className="glass-input w-full rounded-xl p-3 text-sm"
+                      >
+                        <option value="Male" className={isDark ? "bg-[#040b10]" : "bg-white"}>Male</option>
+                        <option value="Female" className={isDark ? "bg-[#040b10]" : "bg-white"}>Female</option>
+                        <option value="Other" className={isDark ? "bg-[#040b10]" : "bg-white"}>Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Sub-Type</label>
+                      <select
+                        value={editForm.individualSubType}
+                        onChange={(e) =>
+                          setEditForm((prev) => (prev ? { ...prev, individualSubType: e.target.value } : prev))
+                        }
+                        className="glass-input w-full rounded-xl p-3 text-sm"
+                      >
+                        <option value="Individual" className={isDark ? "bg-[#040b10]" : "bg-white"}>Individual Client</option>
+                        <option value="Minor" className={isDark ? "bg-[#040b10]" : "bg-white"}>Minor</option>
+                        <option value="Group" className={isDark ? "bg-[#040b10]" : "bg-white"}>Group</option>
+                        <option value="Staff" className={isDark ? "bg-[#040b10]" : "bg-white"}>Staff</option>
+                      </select>
+                    </div>
                   </div>
                 </>
               ) : (
                 <>
-                  <input
-                    type="text"
-                    placeholder="Organization Name"
-                    value={editForm.organizationName}
-                    onChange={(e) =>
-                      setEditForm((prev) => (prev ? { ...prev, organizationName: e.target.value } : prev))
-                    }
-                    className={`w-full rounded-xl border p-3 text-sm outline-none ${field}`}
-                    required
-                  />
-                  <div className="grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Organization Name</label>
                     <input
                       type="text"
-                      placeholder="Registration Number"
-                      value={editForm.registrationNumber}
+                      placeholder="Organization Name"
+                      value={editForm.organizationName}
                       onChange={(e) =>
-                        setEditForm((prev) => (prev ? { ...prev, registrationNumber: e.target.value } : prev))
+                        setEditForm((prev) => (prev ? { ...prev, organizationName: e.target.value } : prev))
                       }
-                      className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+                      className="glass-input w-full rounded-xl p-3 text-sm"
                       required
                     />
-                    <input
-                      type="date"
-                      value={editForm.incorporationDate}
-                      onChange={(e) =>
-                        setEditForm((prev) => (prev ? { ...prev, incorporationDate: e.target.value } : prev))
-                      }
-                      className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-                    />
                   </div>
-                  <select
-                    value={editForm.nonIndividualSubType}
-                    onChange={(e) =>
-                      setEditForm((prev) => (prev ? { ...prev, nonIndividualSubType: e.target.value } : prev))
-                    }
-                    className={`w-full rounded-xl border p-3 text-sm outline-none ${field}`}
-                  >
-                    <option value="Corporate">Corporate</option>
-                    <option value="Association">Association</option>
-                    <option value="Bank">Bank</option>
-                    <option value="NGO">NGO</option>
-                  </select>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Registration Number</label>
+                      <input
+                        type="text"
+                        placeholder="Registration Number"
+                        value={editForm.registrationNumber}
+                        onChange={(e) =>
+                          setEditForm((prev) => (prev ? { ...prev, registrationNumber: e.target.value } : prev))
+                        }
+                        className="glass-input w-full rounded-xl p-3 text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Incorporation Date</label>
+                      <input
+                        type="date"
+                        value={editForm.incorporationDate}
+                        onChange={(e) =>
+                          setEditForm((prev) => (prev ? { ...prev, incorporationDate: e.target.value } : prev))
+                        }
+                        className="glass-input w-full rounded-xl p-3 text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Sub-Type</label>
+                    <select
+                      value={editForm.nonIndividualSubType}
+                      onChange={(e) =>
+                        setEditForm((prev) => (prev ? { ...prev, nonIndividualSubType: e.target.value } : prev))
+                      }
+                      className="glass-input w-full rounded-xl p-3 text-sm"
+                    >
+                      <option value="Corporate" className={isDark ? "bg-[#040b10]" : "bg-white"}>Corporate</option>
+                      <option value="Association" className={isDark ? "bg-[#040b10]" : "bg-white"}>Association</option>
+                      <option value="Bank" className={isDark ? "bg-[#040b10]" : "bg-white"}>Bank</option>
+                      <option value="NGO" className={isDark ? "bg-[#040b10]" : "bg-white"}>NGO</option>
+                    </select>
+                  </div>
                 </>
               )}
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className={`mt-8 flex justify-end gap-3 pt-4 border-t ${isDark ? "border-white/5" : "border-[#E2E8F0]"}`}>
                 <button
                   type="button"
                   onClick={closeEditModal}
-                  className={`rounded-xl border px-4 py-2 text-sm font-semibold ${
-                    isDark
-                      ? "border-[#35535b] bg-[#10252d] text-[#b9d9d4] hover:bg-[#183641]"
-                      : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-                  }`}
+                  className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingEdit}
-                  className="rounded-xl bg-[#2dc7b8] px-4 py-2 text-sm font-semibold text-[#03272b] transition-colors hover:bg-[#43ded0] disabled:opacity-50"
+                  className="glass-button rounded-xl px-5 py-2.5 text-sm font-bold tracking-wide disabled:opacity-50"
                 >
                   {savingEdit ? "Saving..." : "Save Changes"}
                 </button>

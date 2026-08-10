@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const [resetRows]: any = await db.execute(
       `SELECT setting_value AS settingValue FROM admin_settings WHERE setting_key = 'dashboard_reset_at' LIMIT 1`
     );
-    const resetAt = resetRows?.[0]?.settingValue ?? null;
+    const resetAt = resetRows?.[0]?.settingValue ?? '1970-01-01';
 
     const [clientWeekRows]: any = await db.execute(
       `
@@ -137,6 +137,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
+    console.error("METRICS API ERROR:", error);
     return NextResponse.json(
       { success: false, error: error?.message ?? "Failed to load dashboard metrics." },
       { status: 500 }

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import AdminDashboardShell from "@/components/AdminDashboardShell";
+import AdminBalancesPanel from "@/components/AdminBalancesPanel";
 import { ADMIN_SESSION_COOKIE, decodeAdminSessionToken, verifyAdminSessionToken } from "@/lib/adminAuth";
 
 export default async function BalanceDashboardPage() {
@@ -13,7 +13,6 @@ export default async function BalanceDashboardPage() {
   }
 
   const session = decodeAdminSessionToken(sessionToken);
-  const adminName = session?.username ?? "Admin";
   const roleId = Number(session?.roleId ?? 0);
 
   if (!Number.isInteger(roleId) || roleId <= 0) {
@@ -30,15 +29,5 @@ export default async function BalanceDashboardPage() {
     redirect("/dashboard");
   }
 
-  return (
-    <AdminDashboardShell
-      adminName={adminName}
-      showClients={false}
-      showProducts={false}
-      showAccounts={false}
-      showTransactions={false}
-      showBalances
-      showBackToDashboard
-    />
-  );
+  return <AdminBalancesPanel theme="dark" />;
 }

@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: any) {
+    console.error("SECURITY ME API ERROR:", error);
     return NextResponse.json(
       { success: false, error: error?.message ?? "Failed to load session." },
       { status: 500 }

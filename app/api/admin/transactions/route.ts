@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     const [resetRows]: any = await db.execute(
       `SELECT setting_value AS settingValue FROM admin_settings WHERE setting_key = 'transactions_reset_at' LIMIT 1`
     );
-    const resetAt = resetRows?.[0]?.settingValue ?? null;
+    const resetAt = resetRows?.[0]?.settingValue ?? '1970-01-01';
 
     const type = toSafeTypeFilter(request.nextUrl.searchParams.get("type"));
     const accountIdRaw = request.nextUrl.searchParams.get("accountId");
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
       ORDER BY t.created_at DESC
       LIMIT ?
       `,
-      [type, type, accountId, accountId, resetAt, startDate, startDate, endDate, endDate, limit]
+      [type, type, accountId, accountId, resetAt, startDate, startDate, endDate, endDate, String(limit)]
     );
 
     return NextResponse.json({ success: true, data: rows ?? [] });

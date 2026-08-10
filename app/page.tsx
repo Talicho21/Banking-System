@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { Moon, ShieldUser, Sun } from "lucide-react";
 import RegistrationForm from "@/components/RegistrationForm";
+import { useTheme } from "next-themes";
+
 
 export default function Home() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-  const isDark = theme === "dark";
+  const { theme } = useTheme();
+  const isDark = theme !== "light";
 
   return (
     <main
@@ -96,20 +98,6 @@ export default function Home() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => setTheme(isDark ? "light" : "dark")}
-        aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-        title={isDark ? "Light mode" : "Dark mode"}
-        className={`absolute right-6 top-6 z-20 rounded-full border p-2.5 transition-colors ${
-          isDark
-            ? "border-[#31515a] bg-[#0b1d25]/80 text-[#b7d8d4] hover:bg-[#14303b]"
-            : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-        }`}
-      >
-        {isDark ? <Sun size={18} strokeWidth={2.2} /> : <Moon size={18} strokeWidth={2.2} />}
-      </button>
-
       <Link
         href="/admin/login"
         className={`absolute left-6 top-6 z-20 inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
@@ -171,7 +159,7 @@ export default function Home() {
         </div>
 
         <div className="order-1 lg:order-2">
-          <RegistrationForm theme={theme} />
+          <RegistrationForm theme={theme as "light" | "dark"} />
         </div>
       </section>
     </main>

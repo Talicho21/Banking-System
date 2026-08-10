@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Plus, Edit } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useToast, ToastContainer } from "@/components/Toast";
 
 type Product = {
   productId: number;
@@ -43,12 +46,12 @@ type CreateFormState = {
 };
 
 export default function AdminProductsPanel({ theme, onProductCreated }: AdminProductsPanelProps) {
-  const isDark = theme === "dark";
+  const { theme: nextTheme } = useTheme();
+  const isDark = nextTheme !== "light";
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [createError, setCreateError] = useState("");
-  const [createSuccess, setCreateSuccess] = useState("");
+  const { toasts, success: toastSuccess, error: toastError, dismiss } = useToast();
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
@@ -61,22 +64,6 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
     minimumBalance: "0",
   });
 
-  const panel = isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#b6d3ce] bg-[#f5fffd]/90";
-  const heading = isDark ? "text-[#f2fffd]" : "text-[#123a3f]";
-  const badge = isDark ? "border-[#27464e] bg-[#0d232b] text-[#8eb8b2]" : "border-[#a7cfc9] bg-[#ebf9f7] text-[#386f68]";
-  const field = isDark
-    ? "border-[#22414d] bg-[#0a2029] text-[#e6f4f2] focus:border-[#2dc7b8]"
-    : "border-[#a6cbc6] bg-[#fbfffe] text-[#173d42] focus:border-[#1ea696]";
-  const tableHead = isDark ? "border-[#1d323a] text-[#8eb8b2]" : "border-[#c6dedb] text-[#4a7570]";
-  const tableBody = isDark ? "text-[#d9efeb]" : "text-[#234f53]";
-  const tableRow = isDark ? "border-[#14262d]" : "border-[#d5e8e5]";
-  const emptyText = isDark ? "text-[#9db8b4]" : "text-[#5a7f7b]";
-  const editBtnClass = isDark
-    ? "rounded-lg border border-[#406089] bg-[#122339] px-3 py-1 text-xs font-semibold text-[#bfddff] transition-colors hover:bg-[#1b3452]"
-    : "rounded-lg border border-[#abc9ec] bg-[#eaf4ff] px-3 py-1 text-xs font-semibold text-[#1f4c7a] transition-colors hover:bg-[#dbeafc]";
-  const deleteBtnClass = isDark
-    ? "rounded-lg border border-red-600/50 bg-red-700/20 px-3 py-1 text-xs font-semibold text-red-200 transition-colors hover:bg-red-700/35"
-    : "rounded-lg border border-red-300 bg-red-100 px-3 py-1 text-xs font-semibold text-red-700 transition-colors hover:bg-red-200";
 
   const loadProducts = async () => {
     setLoading(true);
@@ -105,35 +92,33 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
-    setCreateError("");
-    setCreateSuccess("");
 
     const productName = form.productName.trim();
     const interestRate = Number(form.interestRate);
     const minimumBalance = Number(form.minimumBalance);
 
     if (!productName) {
-      setCreateError("Product name is required.");
+      toastError("Product name is required.");
       return;
     }
 
     if (!Number.isFinite(interestRate) || interestRate < 0) {
-      setCreateError("Interest rate must be a valid number.");
+      toastError("Interest rate must be a valid number.");
       return;
     }
 
     if (!form.activeFrom) {
-      setCreateError("Active from date is required.");
+      toastError("Active from date is required.");
       return;
     }
 
     if (form.expiryDate && form.expiryDate < form.activeFrom) {
-      setCreateError("Expiry date cannot be before active from date.");
+      toastError("Expiry date cannot be before active from date.");
       return;
     }
 
     if (!Number.isFinite(minimumBalance) || minimumBalance < 0) {
-      setCreateError("Minimum balance must be a valid number.");
+      toastError("Minimum balance must be a valid number.");
       return;
     }
 
@@ -154,11 +139,11 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
       const result: ApiResponse<Product> = await response.json();
 
       if (!response.ok || !result.success) {
-        setCreateError(result.error ?? "Failed to create product.");
+        toastError(result.error ?? "Failed to create product.");
         return;
       }
 
-      setCreateSuccess(`Product created: ${result.data.productName}`);
+      toastSuccess(`✓ Product "${result.data.productName}" created!`);
       setForm({
         productName: "",
         interestRate: "0",
@@ -170,7 +155,7 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
       await loadProducts();
       onProductCreated?.();
     } catch {
-      setCreateError("Failed to create product.");
+      toastError("Failed to create product.");
     }
   };
 
@@ -200,38 +185,37 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
     }
 
     setSavingEdit(true);
-    setCreateError("");
 
     const productName = editForm.productName.trim();
     const interestRate = Number(editForm.interestRate);
     const minimumBalance = Number(editForm.minimumBalance);
 
     if (!productName) {
-      setCreateError("Product name is required.");
+      toastError("Product name is required.");
       setSavingEdit(false);
       return;
     }
 
     if (!Number.isFinite(interestRate) || interestRate < 0) {
-      setCreateError("Interest rate must be a valid number.");
+      toastError("Interest rate must be a valid number.");
       setSavingEdit(false);
       return;
     }
 
     if (!editForm.activeFrom) {
-      setCreateError("Active from date is required.");
+      toastError("Active from date is required.");
       setSavingEdit(false);
       return;
     }
 
     if (editForm.expiryDate && editForm.expiryDate < editForm.activeFrom) {
-      setCreateError("Expiry date cannot be before active from date.");
+      toastError("Expiry date cannot be before active from date.");
       setSavingEdit(false);
       return;
     }
 
     if (!Number.isFinite(minimumBalance) || minimumBalance < 0) {
-      setCreateError("Minimum balance must be a valid number.");
+      toastError("Minimum balance must be a valid number.");
       setSavingEdit(false);
       return;
     }
@@ -253,15 +237,16 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
       const result: ApiResponse<Product> = await response.json();
 
       if (!response.ok || !result.success) {
-        setCreateError(result.error ?? "Failed to update product.");
+        toastError(result.error ?? "Failed to update product.");
         return;
       }
 
+      toastSuccess("✓ Product updated successfully.");
       closeEditModal();
       await loadProducts();
       onProductCreated?.();
     } catch {
-      setCreateError("Failed to update product.");
+      toastError("Failed to update product.");
     } finally {
       setSavingEdit(false);
     }
@@ -278,14 +263,15 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
       const result: ApiResponse<unknown> = await response.json();
 
       if (!response.ok || !result.success) {
-        setCreateError(result.error ?? "Delete failed.");
+        toastError(result.error ?? "Delete failed.");
         return;
       }
 
+      toastSuccess(`✓ Product "${productName}" deleted.`);
       await loadProducts();
       onProductCreated?.();
     } catch {
-      setCreateError("Delete failed.");
+      toastError("Delete failed.");
     }
   };
 
@@ -294,138 +280,134 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
   }, [products.length]);
 
   return (
-    <section className={`mt-6 rounded-2xl border p-5 backdrop-blur-md ${panel}`}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className={`text-lg font-semibold ${heading}`}>Products</h2>
-        <span className={`rounded-full border px-3 py-1 text-xs ${badge}`}>{filteredLabel}</span>
+    <section className="mt-8 glass-panel rounded-2xl p-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className={`text-lg font-semibold ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]"}`}>Products</h2>
+        <span className={`rounded-full border px-3 py-1 text-xs ${isDark ? "border-white/10 bg-[#0d232b] text-[#8ed7cf]" : "border-[#E2E8F0] bg-[#F1F5F9] text-[#475569]"}`}>{filteredLabel}</span>
       </div>
 
-      <form onSubmit={handleCreate} className="mb-5 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+      <form onSubmit={handleCreate} className="mb-6 grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto]">
         <input
           type="text"
           placeholder="Product Name"
           value={form.productName}
           onChange={(event) => setForm((prev) => ({ ...prev, productName: event.target.value }))}
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className={`glass-input rounded-xl p-3 text-sm ${isDark ? "placeholder-white/30" : "placeholder-[#94A3B8]"}`}
         />
         <select
           value={form.productType}
           onChange={(event) =>
             setForm((prev) => ({ ...prev, productType: event.target.value as "Savings" | "Loan" }))
           }
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className="glass-input rounded-xl p-3 text-sm"
         >
-          <option value="Savings">Savings</option>
-          <option value="Loan">Loan</option>
+          <option value="Savings" className={isDark ? "bg-[#040b10]" : "bg-white"}>Savings</option>
+          <option value="Loan" className={isDark ? "bg-[#040b10]" : "bg-white"}>Loan</option>
         </select>
         <input
           type="number"
           min="0"
           step="0.01"
-          placeholder="Interest Rate"
+          placeholder="Interest Rate (%)"
           value={form.interestRate}
           onChange={(event) => setForm((prev) => ({ ...prev, interestRate: event.target.value }))}
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className={`glass-input rounded-xl p-3 text-sm ${isDark ? "placeholder-white/30" : "placeholder-[#94A3B8]"}`}
         />
         <input
           type="date"
           value={form.activeFrom}
           onChange={(event) => setForm((prev) => ({ ...prev, activeFrom: event.target.value }))}
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className="glass-input rounded-xl p-3 text-sm"
+          title="Active From"
         />
         <input
           type="date"
           value={form.expiryDate}
           onChange={(event) => setForm((prev) => ({ ...prev, expiryDate: event.target.value }))}
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className="glass-input rounded-xl p-3 text-sm"
+          title="Expiry Date"
         />
         <input
           type="number"
           min="0"
           step="0.01"
-          placeholder="Minimum Balance"
+          placeholder="Min Balance"
           value={form.minimumBalance}
           onChange={(event) => setForm((prev) => ({ ...prev, minimumBalance: event.target.value }))}
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className={`glass-input rounded-xl p-3 text-sm ${isDark ? "placeholder-white/30" : "placeholder-[#94A3B8]"}`}
         />
         <button
           type="submit"
-          className="rounded-xl bg-[#2dc7b8] px-4 py-3 text-sm font-semibold text-[#03272b] transition-colors hover:bg-[#43ded0]"
+          className="glass-button rounded-xl px-4 py-3 text-sm font-semibold tracking-wide md:col-span-full lg:col-span-1"
         >
           Create Product
         </button>
       </form>
 
-      {createError ? (
-        <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-          {createError}
-        </p>
-      ) : null}
-
-      {createSuccess ? (
-        <p className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-          {createSuccess}
-        </p>
-      ) : null}
-
       {error ? (
-        <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
           {error}
         </p>
       ) : null}
 
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
+
       <div className="overflow-x-auto">
-        <table className="w-full min-w-190 border-collapse text-left text-sm">
+        <table className="w-full text-left text-sm">
           <thead>
-            <tr className={`border-b ${tableHead}`}>
-              <th className="px-3 py-2 font-medium">Product</th>
-              <th className="px-3 py-2 font-medium">Type</th>
-              <th className="px-3 py-2 font-medium">Interest</th>
-              <th className="px-3 py-2 font-medium">Min Balance</th>
-              <th className="px-3 py-2 font-medium">Active</th>
-              <th className="px-3 py-2 font-medium">Expiry</th>
-              <th className="px-3 py-2 font-medium">Created</th>
-              <th className="px-3 py-2 font-medium">Actions</th>
+            <tr className={`border-b ${isDark ? "border-white/5 text-[#8ed7cf]" : "border-[#E2E8F0] text-[#64748B]"}`}>
+              <th className="pb-3 pr-4 font-semibold">Product</th>
+              <th className="pb-3 pr-4 font-semibold">Type</th>
+              <th className="pb-3 pr-4 font-semibold">Interest</th>
+              <th className="pb-3 pr-4 font-semibold">Min Balance</th>
+              <th className="pb-3 pr-4 font-semibold">Active</th>
+              <th className="pb-3 pr-4 font-semibold">Expiry</th>
+              <th className="pb-3 pr-4 font-semibold">Created</th>
+              <th className="pb-3 pr-4 font-semibold">Actions</th>
             </tr>
           </thead>
-          <tbody className={tableBody}>
+          <tbody className={isDark ? "text-[#9eb4b0]" : "text-[#475569]"}>
             {loading ? (
               <tr>
-                <td className={`px-3 py-6 ${emptyText}`} colSpan={8}>
+                <td className="py-6 text-center text-xs opacity-60" colSpan={8}>
                   Loading products...
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td className={`px-3 py-6 ${emptyText}`} colSpan={8}>
+                <td className="py-6 text-center text-xs opacity-60" colSpan={8}>
                   No products yet.
                 </td>
               </tr>
             ) : (
               products.map((product) => (
-                <tr key={product.productId} className={`border-b ${tableRow}`}>
-                  <td className="px-3 py-3">{product.productName}</td>
-                  <td className="px-3 py-3">{product.productType}</td>
-                  <td className="px-3 py-3">{Number(product.interestRate ?? 0).toFixed(2)}</td>
-                  <td className="px-3 py-3">{Number(product.minimumBalance ?? 0).toFixed(2)}</td>
-                  <td className="px-3 py-3">{product.activeFrom ? product.activeFrom.slice(0, 10) : "-"}</td>
-                  <td className="px-3 py-3">{product.expiryDate ? product.expiryDate.slice(0, 10) : "-"}</td>
-                  <td className="px-3 py-3">
-                    {product.createdAt ? new Date(product.createdAt).toLocaleString() : "-"}
+                <tr key={product.productId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
+                  <td className={`py-3 pr-4 font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{product.productName}</td>
+                  <td className="py-3 pr-4">
+                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${isDark ? "bg-white/5 border-white/10 text-white" : "bg-[#F1F5F9] border-[#E2E8F0] text-[#0F172A]"}`}>
+                      {product.productType}
+                    </span>
                   </td>
-                  <td className="px-3 py-3">
+                  <td className="py-3 pr-4">{Number(product.interestRate ?? 0).toFixed(2)}%</td>
+                  <td className="py-3 pr-4">{Number(product.minimumBalance ?? 0).toFixed(2)}</td>
+                  <td className="py-3 pr-4">{product.activeFrom ? product.activeFrom.slice(0, 10) : "-"}</td>
+                  <td className="py-3 pr-4">{product.expiryDate ? product.expiryDate.slice(0, 10) : "-"}</td>
+                  <td className="py-3 pr-4">
+                    {product.createdAt ? new Date(product.createdAt).toLocaleDateString() : "-"}
+                  </td>
+                  <td className="py-3 pr-4">
                     <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => openEditModal(product)}
-                        className={editBtnClass}
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
                       >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => deleteProduct(product.productId, product.productName)}
-                        className={deleteBtnClass}
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${isDark ? "border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20" : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"}`}
                       >
                         Delete
                       </button>
@@ -439,98 +421,127 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
       </div>
 
       {editingProduct && editForm ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/55" onClick={closeEditModal} />
-          <section
-            className={`relative z-10 w-full max-w-lg rounded-2xl border p-5 backdrop-blur-xl ${
-              isDark ? "border-[#2a4450] bg-[#081822]/95" : "border-[#b8d2ce] bg-[#f9fffd]/95"
-            }`}
-          >
-            <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className={`absolute inset-0 backdrop-blur-sm ${isDark ? "bg-black/60" : "bg-[#0F172A]/20"}`} onClick={closeEditModal} />
+          <section className={`glass-panel relative z-10 w-full max-w-lg rounded-2xl p-6 ${isDark ? "" : "shadow-xl border-[#E2E8F0] bg-[#FFFFFF]"}`}>
+            <div className="mb-6 flex items-start justify-between gap-3">
               <div>
-                <p className={`text-xs uppercase tracking-[0.22em] ${isDark ? "text-[#8bc6c0]" : "text-[#317a72]"}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${isDark ? "text-[#B6FF00]" : "text-[#10B981]"}`}>
                   Edit Product
                 </p>
-                <h3 className={`mt-1 text-xl font-bold ${heading}`}>Product #{editingProduct.productId}</h3>
+                <h3 className={`mt-1 text-xl font-bold ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]"}`}>Product #{editingProduct.productId}</h3>
               </div>
               <button
                 type="button"
                 onClick={closeEditModal}
-                className={`rounded-lg border px-2.5 py-1 text-sm ${
-                  isDark ? "border-[#35535b] text-[#b9d9d4]" : "border-[#a8c9c4] text-[#2b6460]"
-                }`}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
               >
                 Close
               </button>
             </div>
 
-            <form onSubmit={saveEdit} className="space-y-3">
-              <input
-                type="text"
-                placeholder="Product Name"
-                value={editForm.productName}
-                onChange={(event) =>
-                  setEditForm((prev) => (prev ? { ...prev, productName: event.target.value } : prev))
-                }
-                className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-              />
-              <select
-                value={editForm.productType}
-                onChange={(event) =>
-                  setEditForm((prev) =>
-                    prev ? { ...prev, productType: event.target.value as "Savings" | "Loan" } : prev
-                  )
-                }
-                className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-              >
-                <option value="Savings">Savings</option>
-                <option value="Loan">Loan</option>
-              </select>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Interest Rate"
-                value={editForm.interestRate}
-                onChange={(event) =>
-                  setEditForm((prev) => (prev ? { ...prev, interestRate: event.target.value } : prev))
-                }
-                className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-              />
-              <input
-                type="date"
-                value={editForm.activeFrom}
-                onChange={(event) =>
-                  setEditForm((prev) => (prev ? { ...prev, activeFrom: event.target.value } : prev))
-                }
-                className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-              />
-              <input
-                type="date"
-                value={editForm.expiryDate}
-                onChange={(event) =>
-                  setEditForm((prev) => (prev ? { ...prev, expiryDate: event.target.value } : prev))
-                }
-                className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-              />
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="Minimum Balance"
-                value={editForm.minimumBalance}
-                onChange={(event) =>
-                  setEditForm((prev) => (prev ? { ...prev, minimumBalance: event.target.value } : prev))
-                }
-                className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-              />
-              <button
-                type="submit"
-                disabled={savingEdit}
-                className="rounded-xl bg-[#2dc7b8] px-4 py-3 text-sm font-semibold text-[#03272b] transition-colors hover:bg-[#43ded0] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {savingEdit ? "Saving..." : "Save Changes"}
-              </button>
+            <form onSubmit={saveEdit} className="space-y-4">
+              <div>
+                <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Product Name</label>
+                <input
+                  type="text"
+                  placeholder="Product Name"
+                  value={editForm.productName}
+                  onChange={(event) =>
+                    setEditForm((prev) => (prev ? { ...prev, productName: event.target.value } : prev))
+                  }
+                  className="glass-input w-full rounded-xl p-3 text-sm"
+                />
+              </div>
+              
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Type</label>
+                  <select
+                    value={editForm.productType}
+                    onChange={(event) =>
+                      setEditForm((prev) =>
+                        prev ? { ...prev, productType: event.target.value as "Savings" | "Loan" } : prev
+                      )
+                    }
+                    className="glass-input w-full rounded-xl p-3 text-sm"
+                  >
+                    <option value="Savings" className={isDark ? "bg-[#040b10]" : "bg-white"}>Savings</option>
+                    <option value="Loan" className={isDark ? "bg-[#040b10]" : "bg-white"}>Loan</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Interest Rate (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Interest Rate"
+                    value={editForm.interestRate}
+                    onChange={(event) =>
+                      setEditForm((prev) => (prev ? { ...prev, interestRate: event.target.value } : prev))
+                    }
+                    className="glass-input w-full rounded-xl p-3 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Active From</label>
+                  <input
+                    type="date"
+                    value={editForm.activeFrom}
+                    onChange={(event) =>
+                      setEditForm((prev) => (prev ? { ...prev, activeFrom: event.target.value } : prev))
+                    }
+                    className="glass-input w-full rounded-xl p-3 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Expiry Date</label>
+                  <input
+                    type="date"
+                    value={editForm.expiryDate}
+                    onChange={(event) =>
+                      setEditForm((prev) => (prev ? { ...prev, expiryDate: event.target.value } : prev))
+                    }
+                    className="glass-input w-full rounded-xl p-3 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Minimum Balance</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="Minimum Balance"
+                  value={editForm.minimumBalance}
+                  onChange={(event) =>
+                    setEditForm((prev) => (prev ? { ...prev, minimumBalance: event.target.value } : prev))
+                  }
+                  className="glass-input w-full rounded-xl p-3 text-sm"
+                />
+              </div>
+
+              <div className={`mt-8 flex justify-end gap-3 pt-4 border-t ${isDark ? "border-white/5" : "border-[#E2E8F0]"}`}>
+                <button
+                  type="button"
+                  onClick={closeEditModal}
+                  className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="glass-button rounded-xl px-5 py-2.5 text-sm font-bold tracking-wide disabled:opacity-50"
+                >
+                  {savingEdit ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
             </form>
           </section>
         </div>

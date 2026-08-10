@@ -47,7 +47,7 @@ export async function PUT(
 
     if (permissionIds.length) {
       const values = permissionIds.map(() => "(?, ?)").join(", ");
-      const paramsList = permissionIds.flatMap((permissionId) => [roleId, permissionId]);
+      const paramsList = permissionIds.flatMap((permissionId: number) => [roleId, permissionId]);
       await connection.execute(
         `INSERT INTO role_permissions (role_id, permission_id) VALUES ${values}`,
         paramsList

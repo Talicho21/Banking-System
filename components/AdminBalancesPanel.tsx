@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTheme } from "next-themes";
+import { useToast, ToastContainer } from "@/components/Toast";
 
 type Product = {
   productId: number;
@@ -36,7 +38,8 @@ type StatusFilter = "All" | AccountStatus;
 const STATUS_FILTERS: StatusFilter[] = ["All", "Active", "Inactive", "Frozen", "Closed"];
 
 export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
-  const isDark = theme === "dark";
+  const { theme: nextTheme } = useTheme();
+  const isDark = nextTheme !== "light";
   const [products, setProducts] = useState<Product[]>([]);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -46,18 +49,18 @@ export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
   const [productFilter, setProductFilter] = useState("All");
   const [search, setSearch] = useState("");
 
-  const panel = isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#b6d3ce] bg-[#f5fffd]/90";
-  const heading = isDark ? "text-[#f2fffd]" : "text-[#123a3f]";
+  const panel = isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#E2E8F0] bg-[#FFFFFF] shadow-[0_4px_12px_rgba(0,0,0,0.02)]";
+  const heading = isDark ? "text-[#f2fffd] drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]";
   const badge = isDark
     ? "border-[#27464e] bg-[#0d232b] text-[#8eb8b2]"
-    : "border-[#a7cfc9] bg-[#ebf9f7] text-[#386f68]";
+    : "border-[#E2E8F0] bg-[#F1F5F9] text-[#475569]";
   const field = isDark
-    ? "border-[#22414d] bg-[#0a2029] text-[#e6f4f2] focus:border-[#2dc7b8]"
-    : "border-[#a6cbc6] bg-[#fbfffe] text-[#173d42] focus:border-[#1ea696]";
-  const tableHead = isDark ? "border-[#1d323a] text-[#8eb8b2]" : "border-[#c6dedb] text-[#4a7570]";
-  const tableBody = isDark ? "text-[#d9efeb]" : "text-[#234f53]";
-  const tableRow = isDark ? "border-[#14262d]" : "border-[#d5e8e5]";
-  const emptyText = isDark ? "text-[#9db8b4]" : "text-[#5a7f7b]";
+    ? "border-[#22414d] bg-[#0a2029] text-[#e6f4f2] focus:border-[#2dc7b8] placeholder-white/30"
+    : "border-[#E2E8F0] bg-white text-[#0F172A] focus:border-[#10B981] placeholder-[#94A3B8]";
+  const tableHead = isDark ? "border-[#1d323a] text-[#8eb8b2]" : "border-[#E2E8F0] text-[#64748B]";
+  const tableBody = isDark ? "text-[#d9efeb]" : "text-[#475569]";
+  const tableRow = isDark ? "border-[#14262d] hover:bg-white/5 transition-colors" : "border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors";
+  const emptyText = isDark ? "text-[#9db8b4]" : "text-[#64748B]";
 
   const loadProducts = async () => {
     setLoadingProducts(true);
@@ -152,7 +155,7 @@ export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
           className={`rounded-xl border p-3 text-sm outline-none ${field}`}
         >
           {STATUS_FILTERS.map((status) => (
-            <option key={status} value={status}>
+            <option key={status} value={status} className={isDark ? "bg-[#040b10]" : "bg-white"}>
               {status}
             </option>
           ))}
@@ -164,9 +167,9 @@ export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
           className={`rounded-xl border p-3 text-sm outline-none ${field}`}
           disabled={loadingProducts}
         >
-          <option value="All">All Products</option>
+          <option value="All" className={isDark ? "bg-[#040b10]" : "bg-white"}>All Products</option>
           {products.map((product) => (
-            <option key={product.productId} value={product.productId}>
+            <option key={product.productId} value={product.productId} className={isDark ? "bg-[#040b10]" : "bg-white"}>
               {product.productName}
             </option>
           ))}
@@ -182,7 +185,7 @@ export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
 
         <button
           type="submit"
-          className="rounded-xl bg-[#2dc7b8] px-4 py-3 text-sm font-semibold text-[#03272b] transition-colors hover:bg-[#43ded0]"
+          className="glass-button rounded-xl px-4 py-3 text-sm font-semibold tracking-wide"
         >
           Apply Filters
         </button>
@@ -216,13 +219,17 @@ export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
               </tr>
             ) : (
               accounts.map((account) => (
-                <tr key={account.accountId} className={`border-b ${tableRow}`}>
-                  <td className="px-3 py-3">{account.accountNumber}</td>
-                  <td className="px-3 py-3">{account.clientId}</td>
+                <tr key={account.accountId} className={`border-b last:border-0 ${tableRow}`}>
+                  <td className={`px-3 py-3 font-mono ${isDark ? "text-[#d9ece9]" : "text-[#0F172A]"}`}>{account.accountNumber}</td>
+                  <td className="px-3 py-3">#{account.clientId}</td>
                   <td className="px-3 py-3">{account.productName}</td>
                   <td className="px-3 py-3">{account.branchId}</td>
-                  <td className="px-3 py-3">{Number(account.balance ?? 0).toFixed(2)}</td>
-                  <td className="px-3 py-3">{account.status}</td>
+                  <td className={`px-3 py-3 font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{Number(account.balance ?? 0).toFixed(2)}</td>
+                  <td className="px-3 py-3">
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] border ${isDark ? "bg-[#10252d] border-white/10 text-[#d9ece9]" : "bg-[#F1F5F9] border-[#E2E8F0] text-[#0F172A]"}`}>
+                      {account.status}
+                    </span>
+                  </td>
                   <td className="px-3 py-3">{new Date(account.createdAt).toLocaleString()}</td>
                 </tr>
               ))

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSecurity } from "@/components/SecurityContext";
+import { useTheme } from "next-themes";
 
 type MetricsResponse = {
   newClientsWeek: number;
@@ -30,45 +32,22 @@ type ApiResponse<T> = {
 };
 
 type AdminDashboardMetricsProps = {
-  theme: "dark" | "light";
+  theme?: "dark" | "light"; // kept for backwards compatibility in usage, but ignored
 };
 
-export default function AdminDashboardMetrics({ theme }: AdminDashboardMetricsProps) {
-  const isDark = theme === "dark";
+export default function AdminDashboardMetrics({ theme: _propTheme }: AdminDashboardMetricsProps) {
   const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState("");
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [canViewBalance, setCanViewBalance] = useState(false);
-
-  const cardBase = isDark ? "border-[#27464e] bg-[#0a1f27]/90" : "border-[#a8cdc8] bg-[#f3fffd]/95";
-  const cardTitle = isDark ? "text-[#80bab3]" : "text-[#317a72]";
-  const cardValue = isDark ? "text-[#dffbf7]" : "text-[#124247]";
-  const cardText = isDark ? "text-[#9db8b4]" : "text-[#5a7f7b]";
-  const panel = isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#b6d3ce] bg-[#f5fffd]/90";
-  const heading = isDark ? "text-[#f2fffd]" : "text-[#123a3f]";
-  const tableHead = isDark ? "border-[#1d323a] text-[#8eb8b2]" : "border-[#c6dedb] text-[#4a7570]";
-  const tableBody = isDark ? "text-[#d9efeb]" : "text-[#234f53]";
-  const tableRow = isDark ? "border-[#14262d]" : "border-[#d5e8e5]";
-  const emptyText = isDark ? "text-[#9db8b4]" : "text-[#5a7f7b]";
-
-  const loadSession = async () => {
-    try {
-      const response = await fetch("/api/admin/security/me", { method: "GET", cache: "no-store" });
-      const result: ApiResponse<{ roleName: string }> = await response.json();
-      if (response.ok && result.success) {
-        const roleName = result.data?.roleName ?? "";
-        setIsSuperAdmin(roleName === "Super Admin");
-        setCanViewBalance(roleName === "Manager" || roleName === "Super Admin");
-      }
-    } catch {
-      setIsSuperAdmin(false);
-      setCanViewBalance(false);
-    }
-  };
+  const { roleName } = useSecurity();
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const normalizedRole = (roleName || "").trim().toLowerCase();
+  const isSuperAdmin = normalizedRole === "super admin";
+  const canViewBalance = normalizedRole === "manager" || normalizedRole === "super admin";
 
   const loadMetrics = async () => {
     setLoading(true);
@@ -96,7 +75,6 @@ export default function AdminDashboardMetrics({ theme }: AdminDashboardMetricsPr
 
   useEffect(() => {
     loadMetrics();
-    loadSession();
   }, []);
 
   const handleReset = async () => {
@@ -148,30 +126,35 @@ export default function AdminDashboardMetrics({ theme }: AdminDashboardMetricsPr
   }, [metrics]);
 
   return (
-    <section className="mb-8">
+    <section className="mb-8 space-y-6">
+      {error ? (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200 backdrop-blur-md">
+          {error}
+        </div>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
-          <article key={card.label} className={`rounded-2xl border p-5 ${cardBase}`}>
-            <p className={`text-xs uppercase tracking-[0.2em] ${cardTitle}`}>{card.label}</p>
-            <p className={`mt-3 text-3xl font-bold ${cardValue}`}>{card.value}</p>
-            <p className={`mt-1 text-sm ${cardText}`}>{card.helper}</p>
+          <article key={card.label} className={`glass-panel rounded-2xl p-6 transition-all hover:-translate-y-1 ${isDark ? "hover:shadow-[0_8px_32px_rgba(182,255,0,0.1)]" : "hover:shadow-[0_12px_36px_rgba(0,0,0,0.08)]"}`}>
+            <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${isDark ? "text-[#9eb4b0]" : "text-[#475569]"}`}>{card.label}</p>
+            <p className={`mt-3 text-4xl font-light tracking-tight ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.2)]" : "text-[#0F172A] font-semibold"}`}>
+              {loading ? "-" : card.value}
+            </p>
+            <p className={`mt-2 text-xs ${isDark ? "text-[#527471]" : "text-[#64748B]"}`}>{card.helper}</p>
           </article>
         ))}
       </div>
 
-      <div className={`mt-6 rounded-2xl border p-5 backdrop-blur-md ${panel}`}>
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className={`text-lg font-semibold ${heading}`}>Top Transactions This Week</h2>
+      <div className="glass-panel rounded-2xl p-6">
+        <div className="flex items-center justify-between pb-4">
+          <h2 className={`text-lg font-semibold ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]"}`}>
+            Top Transactions This Week
+          </h2>
           {isSuperAdmin ? (
             <button
-              type="button"
               onClick={handleReset}
               disabled={resetting}
-              className={`rounded-xl border px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition-colors ${
-                isDark
-                  ? "border-[#35535b] bg-[#10252d] text-[#b9d9d4] hover:bg-[#183641]"
-                  : "border-[#98c4be] bg-[#f8fffe] text-[#2c5f5a] hover:bg-[#eff9f7]"
-              } ${resetting ? "opacity-70" : ""}`}
+              className="glass-button rounded-full px-5 py-2 text-xs font-bold uppercase tracking-wider"
             >
               {resetting ? "Clearing..." : "Clear Dashboard"}
             </button>
@@ -179,57 +162,50 @@ export default function AdminDashboardMetrics({ theme }: AdminDashboardMetricsPr
         </div>
 
         {resetError ? (
-          <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-            {resetError}
-          </p>
+          <p className="mb-4 text-sm text-red-400">{resetError}</p>
         ) : null}
-
         {resetSuccess ? (
-          <p className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-            {resetSuccess}
-          </p>
-        ) : null}
-
-        {error ? (
-          <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-            {error}
-          </p>
+          <p className={`mb-4 text-sm ${isDark ? "text-[#B6FF00]" : "text-[#10B981]"}`}>{resetSuccess}</p>
         ) : null}
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-190 border-collapse text-left text-sm">
+          <table className="w-full text-left text-sm">
             <thead>
-              <tr className={`border-b ${tableHead}`}>
-                <th className="px-3 py-2 font-medium">Date</th>
-                <th className="px-3 py-2 font-medium">Type</th>
-                <th className="px-3 py-2 font-medium">Direction</th>
-                <th className="px-3 py-2 font-medium">Amount</th>
-                <th className="px-3 py-2 font-medium">Account</th>
+              <tr className={`border-b ${isDark ? "border-white/5 text-[#8ed7cf]" : "border-[#E2E8F0] text-[#64748B]"}`}>
+                <th className="pb-3 pr-4 font-semibold">Date</th>
+                <th className="pb-3 pr-4 font-semibold">Type</th>
+                <th className="pb-3 pr-4 font-semibold">Direction</th>
+                <th className="pb-3 pr-4 font-semibold">Amount</th>
+                <th className="pb-3 pr-4 font-semibold">Account</th>
               </tr>
             </thead>
-            <tbody className={tableBody}>
+            <tbody className={isDark ? "text-[#9eb4b0]" : "text-[#475569]"}>
               {loading ? (
                 <tr>
-                  <td className={`px-3 py-6 ${emptyText}`} colSpan={5}>
+                  <td colSpan={5} className="py-6 text-center text-xs opacity-60">
                     Loading transactions...
                   </td>
                 </tr>
-              ) : metrics?.topTransactionsWeek?.length ? (
-                metrics.topTransactionsWeek.map((transaction) => (
-                  <tr key={transaction.transactionId} className={`border-b ${tableRow}`}>
-                    <td className="px-3 py-3">{new Date(transaction.createdAt).toLocaleString()}</td>
-                    <td className="px-3 py-3">{transaction.transactionType}</td>
-                    <td className="px-3 py-3">{transaction.direction}</td>
-                    <td className="px-3 py-3">{Number(transaction.amount).toFixed(2)}</td>
-                    <td className="px-3 py-3">#{transaction.accountId}</td>
-                  </tr>
-                ))
-              ) : (
+              ) : !metrics?.topTransactionsWeek?.length ? (
                 <tr>
-                  <td className={`px-3 py-6 ${emptyText}`} colSpan={5}>
+                  <td colSpan={5} className="py-6 text-center text-xs opacity-60">
                     No transactions posted this week.
                   </td>
                 </tr>
+              ) : (
+                metrics.topTransactionsWeek.map((tx) => (
+                  <tr key={tx.transactionId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
+                    <td className="py-3 pr-4">{new Date(tx.createdAt).toLocaleDateString()}</td>
+                    <td className="py-3 pr-4">
+                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs border ${isDark ? "bg-[#10252d] border-white/10 text-[#d9ece9]" : "bg-[#F1F5F9] border-[#E2E8F0] text-[#475569]"}`}>
+                        {tx.transactionType}
+                      </span>
+                    </td>
+                    <td className="py-3 pr-4">{tx.direction}</td>
+                    <td className={`py-3 pr-4 font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{tx.amount}</td>
+                    <td className="py-3 pr-4">#{tx.accountId}</td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
@@ -237,43 +213,40 @@ export default function AdminDashboardMetrics({ theme }: AdminDashboardMetricsPr
       </div>
 
       {canViewBalance ? (
-        <div className={`mt-6 rounded-2xl border p-5 backdrop-blur-md ${panel}`}>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className={`text-lg font-semibold ${heading}`}>Top Accounts by Balance</h2>
-          </div>
-
+        <div className="glass-panel rounded-2xl p-6">
+          <h2 className={`mb-4 text-lg font-semibold ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]"}`}>
+            Top Accounts by Balance
+          </h2>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-190 border-collapse text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead>
-                <tr className={`border-b ${tableHead}`}>
-                  <th className="px-3 py-2 font-medium">Account</th>
-                  <th className="px-3 py-2 font-medium">Client</th>
-                  <th className="px-3 py-2 font-medium">Balance</th>
+                <tr className={`border-b ${isDark ? "border-white/5 text-[#8ed7cf]" : "border-[#E2E8F0] text-[#64748B]"}`}>
+                  <th className="pb-3 pr-4 font-semibold">Account</th>
+                  <th className="pb-3 pr-4 font-semibold">Client</th>
+                  <th className="pb-3 pr-4 font-semibold">Balance</th>
                 </tr>
               </thead>
-              <tbody className={tableBody}>
+              <tbody className={isDark ? "text-[#9eb4b0]" : "text-[#475569]"}>
                 {loading ? (
                   <tr>
-                    <td className={`px-3 py-6 ${emptyText}`} colSpan={3}>
+                    <td colSpan={3} className="py-6 text-center text-xs opacity-60">
                       Loading accounts...
                     </td>
                   </tr>
-                ) : metrics?.topAccountsByBalance?.length ? (
-                  metrics.topAccountsByBalance.map((account) => (
-                    <tr key={account.accountId} className={`border-b ${tableRow}`}>
-                      <td className="px-3 py-3">
-                        {account.accountNumber} (#{account.accountId})
-                      </td>
-                      <td className="px-3 py-3">{account.clientId}</td>
-                      <td className="px-3 py-3">{Number(account.balance ?? 0).toFixed(2)}</td>
-                    </tr>
-                  ))
-                ) : (
+                ) : !metrics?.topAccountsByBalance?.length ? (
                   <tr>
-                    <td className={`px-3 py-6 ${emptyText}`} colSpan={3}>
+                    <td colSpan={3} className="py-6 text-center text-xs opacity-60">
                       No accounts available.
                     </td>
                   </tr>
+                ) : (
+                  metrics.topAccountsByBalance.map((acc) => (
+                    <tr key={acc.accountId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
+                      <td className={`py-3 pr-4 font-mono ${isDark ? "text-[#d9ece9]" : "text-[#0F172A]"}`}>{acc.accountNumber}</td>
+                      <td className="py-3 pr-4">#{acc.clientId}</td>
+                      <td className={`py-3 pr-4 font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{acc.balance}</td>
+                    </tr>
+                  ))
                 )}
               </tbody>
             </table>

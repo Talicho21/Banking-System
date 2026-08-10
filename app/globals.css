@@ -1,8 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FCFCFD;
+  --foreground: #0F172A;
+  --cyber-lime: #10B981;
+  --cyber-lime-dim: rgba(16, 185, 129, 0.2);
+  --deep-teal: #F1F5F9;
+}
+
+.dark {
+  --background: #040b10;
+  --foreground: #ededed;
+  --cyber-lime: #B6FF00;
+  --cyber-lime-dim: rgba(182, 255, 0, 0.2);
+  --deep-teal: #061018;
 }
 
 @theme inline {
@@ -12,18 +23,79 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), "Segoe UI", sans-serif;
+  color-scheme: light dark;
 }
+
+/* Glassmorphism Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+
+.dark .glass-panel {
+  background: rgba(4, 11, 16, 0.55);
+  border: 1px solid rgba(182, 255, 0, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+.glass-input {
+  background: #FFFFFF;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #E2E8F0;
+  color: #0F172A;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.dark .glass-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  box-shadow: none;
+}
+
+.glass-input:focus {
+  outline: none;
+  border-color: var(--cyber-lime);
+  box-shadow: 0 0 12px var(--cyber-lime-dim);
+}
+
+.glass-button {
+  background: #10B981;
+  border: 1px solid #059669;
+  color: #FFFFFF;
+  backdrop-filter: blur(4px);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.dark .glass-button {
+  background: rgba(182, 255, 0, 0.1);
+  border: 1px solid rgba(182, 255, 0, 0.4);
+  color: var(--cyber-lime);
+  box-shadow: none;
+}
+
+.glass-button:hover {
+  background: #059669;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+  transform: translateY(-2px);
+}
+
+.dark .glass-button:hover {
+  background: rgba(182, 255, 0, 0.25);
+  box-shadow: 0 0 20px rgba(182, 255, 0, 0.5);
+  transform: translateY(-2px);
+}
+
 
 @keyframes bankBgDrift {
   0% {

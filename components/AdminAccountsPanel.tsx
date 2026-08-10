@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useToast, ToastContainer } from "@/components/Toast";
+import { useTheme } from "next-themes";
+import { useSecurity } from "@/components/SecurityContext";
 
 type Product = {
   productId: number;
@@ -45,18 +48,21 @@ type StatusFilter = "All" | AccountStatus;
 const STATUS_FILTERS: StatusFilter[] = ["All", "Active", "Inactive", "Frozen", "Closed"];
 
 export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsPanelProps) {
-  const isDark = theme === "dark";
+  const { theme: nextTheme } = useTheme();
+  const isDark = nextTheme !== "light";
   const [products, setProducts] = useState<Product[]>([]);
   const [accounts, setAccounts] = useState<AccountRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [error, setError] = useState("");
-  const [createError, setCreateError] = useState("");
-  const [createSuccess, setCreateSuccess] = useState("");
-  const [canCreateAccount, setCanCreateAccount] = useState(false);
-  const [canEditAccount, setCanEditAccount] = useState(false);
-  const [canViewBalance, setCanViewBalance] = useState(false);
-  const [editSuccess, setEditSuccess] = useState("");
+  const { toasts, success: toastSuccess, error: toastError, dismiss } = useToast();
+  
+  const { permissions, roleName } = useSecurity();
+  const permissionSet = useMemo(() => new Set(permissions), [permissions]);
+  const canCreateAccount = permissionSet.has("create_account");
+  const canEditAccount = permissionSet.has("edit_account");
+  const canViewBalance = roleName === "Manager" || roleName === "Super Admin";
+
   const [editingAccount, setEditingAccount] = useState<AccountRow | null>(null);
   const [editStatus, setEditStatus] = useState<AccountStatus>("Active");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("All");
@@ -68,16 +74,16 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
     productId: "",
   });
 
-  const panel = isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#b6d3ce] bg-[#f5fffd]/90";
-  const heading = isDark ? "text-[#f2fffd]" : "text-[#123a3f]";
-  const badge = isDark ? "border-[#27464e] bg-[#0d232b] text-[#8eb8b2]" : "border-[#a7cfc9] bg-[#ebf9f7] text-[#386f68]";
+  const panel = isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#E2E8F0] bg-[#FFFFFF]";
+  const heading = isDark ? "text-[#f2fffd]" : "text-[#0F172A]";
+  const badge = isDark ? "border-[#27464e] bg-[#0d232b] text-[#8eb8b2]" : "border-[#E2E8F0] bg-[#F1F5F9] text-[#475569]";
   const field = isDark
     ? "border-[#22414d] bg-[#0a2029] text-[#e6f4f2] focus:border-[#2dc7b8]"
-    : "border-[#a6cbc6] bg-[#fbfffe] text-[#173d42] focus:border-[#1ea696]";
-  const tableHead = isDark ? "border-[#1d323a] text-[#8eb8b2]" : "border-[#c6dedb] text-[#4a7570]";
-  const tableBody = isDark ? "text-[#d9efeb]" : "text-[#234f53]";
-  const tableRow = isDark ? "border-[#14262d]" : "border-[#d5e8e5]";
-  const emptyText = isDark ? "text-[#9db8b4]" : "text-[#5a7f7b]";
+    : "border-[#E2E8F0] bg-white text-[#0F172A] focus:border-[#10B981]";
+  const tableHead = isDark ? "border-[#1d323a] text-[#8eb8b2]" : "border-[#E2E8F0] text-[#64748B]";
+  const tableBody = isDark ? "text-[#d9efeb]" : "text-[#475569]";
+  const tableRow = isDark ? "border-[#14262d]" : "border-[#E2E8F0] hover:bg-[#F8FAFC]";
+  const emptyText = isDark ? "text-[#9db8b4]" : "text-[#64748B]";
 
   const loadProducts = async () => {
     setLoadingProducts(true);
@@ -144,28 +150,6 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
   }, [refreshKey]);
 
   useEffect(() => {
-    const loadPermissions = async () => {
-      try {
-        const response = await fetch("/api/admin/security/me", { method: "GET", cache: "no-store" });
-        const result: ApiResponse<{ permissions: string[] }> = await response.json();
-        if (response.ok && result?.success) {
-          const permissionSet = new Set(result.data?.permissions ?? []);
-          setCanCreateAccount(permissionSet.has("create_account"));
-          setCanEditAccount(permissionSet.has("edit_account"));
-          const roleName = result.data?.roleName ?? "";
-          setCanViewBalance(roleName === "Manager" || roleName === "Super Admin");
-        }
-      } catch {
-        setCanCreateAccount(false);
-        setCanEditAccount(false);
-        setCanViewBalance(false);
-      }
-    };
-
-    loadPermissions();
-  }, []);
-
-  useEffect(() => {
     loadAccounts();
   }, [statusFilter, productFilter]);
 
@@ -176,26 +160,23 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault();
-    setCreateError("");
-    setCreateSuccess("");
-    setEditSuccess("");
 
     const branchId = Number(createForm.branchId);
     const clientId = Number(createForm.clientId);
     const productId = Number(createForm.productId);
 
     if (!Number.isInteger(branchId) || branchId <= 0) {
-      setCreateError("Branch id must be a positive number.");
+      toastError("Branch id must be a positive number.");
       return;
     }
 
     if (!Number.isInteger(clientId) || clientId <= 0) {
-      setCreateError("Client id must be a positive number.");
+      toastError("Client id must be a positive number.");
       return;
     }
 
     if (!Number.isInteger(productId) || productId <= 0) {
-      setCreateError("Product must be selected.");
+      toastError("Product must be selected.");
       return;
     }
 
@@ -209,15 +190,15 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
       const result: ApiResponse<{ accountId: number; accountNumber: string }> = await response.json();
 
       if (!response.ok || !result.success) {
-        setCreateError(result.error ?? "Failed to create account.");
+        toastError(result.error ?? "Failed to create account.");
         return;
       }
 
-      setCreateSuccess(`Account created: ${result.data.accountNumber}`);
+      toastSuccess(`✓ Account ${result.data.accountNumber} created!`);
       setCreateForm({ branchId: "", clientId: "", productId: "" });
       await loadAccounts();
     } catch {
-      setCreateError("Failed to create account.");
+      toastError("Failed to create account.");
     }
   };
 
@@ -228,7 +209,6 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
   const openEdit = (account: AccountRow) => {
     setEditingAccount(account);
     setEditStatus(account.status);
-    setEditSuccess("");
   };
 
   const closeEdit = () => {
@@ -241,7 +221,6 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
       return;
     }
 
-    setEditSuccess("");
     setError("");
 
     try {
@@ -253,34 +232,34 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
       const result: ApiResponse<unknown> = await response.json();
 
       if (!response.ok || !result.success) {
-        setError(result.error ?? "Failed to update account.");
+        toastError(result.error ?? "Failed to update account.");
         return;
       }
 
-      setEditSuccess("Account status updated successfully.");
+      toastSuccess("✓ Account status updated successfully.");
       closeEdit();
       await loadAccounts();
     } catch {
-      setError("Failed to update account.");
+      toastError("Failed to update account.");
     }
   };
 
   return (
-    <section className={`mt-8 rounded-2xl border p-5 backdrop-blur-md ${panel}`}>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className={`text-lg font-semibold ${heading}`}>Account Maintenance</h2>
-        <span className={`rounded-full border px-3 py-1 text-xs ${badge}`}>{filteredLabel}</span>
+    <section className="mt-8 glass-panel rounded-2xl p-6">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className={`text-lg font-semibold ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]"}`}>Account Maintenance</h2>
+        <span className={`rounded-full border px-3 py-1 text-xs ${isDark ? "border-white/10 bg-[#0d232b] text-[#8ed7cf]" : "border-[#E2E8F0] bg-[#F1F5F9] text-[#475569]"}`}>{filteredLabel}</span>
       </div>
 
       {canCreateAccount ? (
-        <form onSubmit={handleCreate} className="mb-5 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+        <form onSubmit={handleCreate} className="mb-6 grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto]">
           <input
             type="number"
             min="1"
             placeholder="Branch ID"
             value={createForm.branchId}
             onChange={(event) => setCreateForm((prev) => ({ ...prev, branchId: event.target.value }))}
-            className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+            className={`glass-input rounded-xl p-3 text-sm ${isDark ? "placeholder-white/30" : "placeholder-[#94A3B8]"}`}
           />
           <input
             type="number"
@@ -288,62 +267,46 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
             placeholder="Client ID"
             value={createForm.clientId}
             onChange={(event) => setCreateForm((prev) => ({ ...prev, clientId: event.target.value }))}
-            className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+            className={`glass-input rounded-xl p-3 text-sm ${isDark ? "placeholder-white/30" : "placeholder-[#94A3B8]"}`}
           />
           <select
             value={createForm.productId}
             onChange={(event) => setCreateForm((prev) => ({ ...prev, productId: event.target.value }))}
-            className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+            className="glass-input rounded-xl p-3 text-sm"
             disabled={loadingProducts}
           >
-            <option value="">Select product</option>
+            <option value="" className={isDark ? "bg-[#040b10]" : "bg-white"}>Select product</option>
             {products.map((product) => (
-              <option key={product.productId} value={product.productId}>
+              <option key={product.productId} value={product.productId} className={isDark ? "bg-[#040b10]" : "bg-white"}>
                 {product.productName}
               </option>
             ))}
           </select>
           <button
             type="submit"
-            className="rounded-xl bg-[#2dc7b8] px-4 py-3 text-sm font-semibold text-[#03272b] transition-colors hover:bg-[#43ded0]"
+            className="glass-button rounded-xl px-4 py-3 text-sm font-semibold tracking-wide"
           >
             Create Account
           </button>
         </form>
       ) : null}
 
-      {createError ? (
-        <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
-          {createError}
-        </p>
-      ) : null}
-
-      {createSuccess ? (
-        <p className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-          {createSuccess}
-        </p>
-      ) : null}
-
-      {editSuccess ? (
-        <p className="mb-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
-          {editSuccess}
-        </p>
-      ) : null}
-
       {error ? (
-        <p className="mb-4 rounded-xl border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+        <p className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
           {error}
         </p>
       ) : null}
 
-      <form onSubmit={onSearchSubmit} className="mb-4 grid gap-3 md:grid-cols-4">
+      <ToastContainer toasts={toasts} dismiss={dismiss} />
+
+      <form onSubmit={onSearchSubmit} className="mb-6 grid gap-4 md:grid-cols-4">
         <select
           value={statusFilter}
           onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className="glass-input rounded-xl p-3 text-sm"
         >
           {STATUS_FILTERS.map((status) => (
-            <option key={status} value={status}>
+            <option key={status} value={status} className={isDark ? "bg-[#040b10]" : "bg-white"}>
               {status}
             </option>
           ))}
@@ -352,11 +315,11 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
         <select
           value={productFilter}
           onChange={(event) => setProductFilter(event.target.value)}
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className="glass-input rounded-xl p-3 text-sm"
         >
-          <option value="All">All Products</option>
+          <option value="All" className={isDark ? "bg-[#040b10]" : "bg-white"}>All Products</option>
           {products.map((product) => (
-            <option key={product.productId} value={product.productId}>
+            <option key={product.productId} value={product.productId} className={isDark ? "bg-[#040b10]" : "bg-white"}>
               {product.productName}
             </option>
           ))}
@@ -367,62 +330,66 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
           placeholder="Search account no or client id"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          className={`rounded-xl border p-3 text-sm outline-none ${field}`}
+          className={`glass-input rounded-xl p-3 text-sm ${isDark ? "placeholder-white/30" : "placeholder-[#94A3B8]"}`}
         />
 
         <button
           type="submit"
-          className="rounded-xl bg-[#2dc7b8] px-4 py-3 text-sm font-semibold text-[#03272b] transition-colors hover:bg-[#43ded0]"
+          className="glass-button rounded-xl px-4 py-3 text-sm font-semibold tracking-wide"
         >
           Apply Filters
         </button>
       </form>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-190 border-collapse text-left text-sm">
+        <table className="w-full text-left text-sm">
           <thead>
-            <tr className={`border-b ${tableHead}`}>
-              <th className="px-3 py-2 font-medium">Account No</th>
-              <th className="px-3 py-2 font-medium">Client ID</th>
-              <th className="px-3 py-2 font-medium">Product</th>
-              <th className="px-3 py-2 font-medium">Branch</th>
-                {canViewBalance ? <th className="px-3 py-2 font-medium">Balance</th> : null}
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Created</th>
-              {canEditAccount ? <th className="px-3 py-2 font-medium">Actions</th> : null}
+            <tr className={`border-b ${isDark ? "border-white/5 text-[#8ed7cf]" : "border-[#E2E8F0] text-[#64748B]"}`}>
+              <th className="pb-3 pr-4 font-semibold">Account No</th>
+              <th className="pb-3 pr-4 font-semibold">Client ID</th>
+              <th className="pb-3 pr-4 font-semibold">Product</th>
+              <th className="pb-3 pr-4 font-semibold">Branch</th>
+                {canViewBalance ? <th className="pb-3 pr-4 font-semibold">Balance</th> : null}
+              <th className="pb-3 pr-4 font-semibold">Status</th>
+              <th className="pb-3 pr-4 font-semibold">Created</th>
+              {canEditAccount ? <th className="pb-3 pr-4 font-semibold">Actions</th> : null}
             </tr>
           </thead>
-          <tbody className={tableBody}>
+          <tbody className={isDark ? "text-[#9eb4b0]" : "text-[#475569]"}>
             {loading ? (
               <tr>
-                <td className={`px-3 py-6 ${emptyText}`} colSpan={canEditAccount ? 8 : 7}>
+                <td className="py-6 text-center text-xs opacity-60" colSpan={canEditAccount ? 8 : 7}>
                   Loading accounts...
                 </td>
               </tr>
             ) : accounts.length === 0 ? (
               <tr>
-                <td className={`px-3 py-6 ${emptyText}`} colSpan={canEditAccount ? 8 : 7}>
+                <td className="py-6 text-center text-xs opacity-60" colSpan={canEditAccount ? 8 : 7}>
                   No accounts found for your selection.
                 </td>
               </tr>
             ) : (
               accounts.map((account) => (
-                <tr key={account.accountId} className={`border-b ${tableRow}`}>
-                  <td className="px-3 py-3">{account.accountNumber}</td>
-                  <td className="px-3 py-3">{account.clientId}</td>
-                  <td className="px-3 py-3">{account.productName}</td>
-                  <td className="px-3 py-3">{account.branchId}</td>
+                <tr key={account.accountId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
+                  <td className={`py-3 pr-4 font-mono ${isDark ? "text-[#d9ece9]" : "text-[#0F172A]"}`}>{account.accountNumber}</td>
+                  <td className="py-3 pr-4">#{account.clientId}</td>
+                  <td className="py-3 pr-4">{account.productName}</td>
+                  <td className="py-3 pr-4">{account.branchId}</td>
                   {canViewBalance ? (
-                    <td className="px-3 py-3">{Number(account.balance ?? 0).toFixed(2)}</td>
+                    <td className={`py-3 pr-4 font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{account.balance}</td>
                   ) : null}
-                  <td className="px-3 py-3">{account.status}</td>
-                  <td className="px-3 py-3">{new Date(account.createdAt).toLocaleString()}</td>
+                  <td className="py-3 pr-4">
+                    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] border ${isDark ? "bg-[#10252d] border-white/10 text-[#d9ece9]" : "bg-[#F1F5F9] border-[#E2E8F0] text-[#0F172A]"}`}>
+                      {account.status}
+                    </span>
+                  </td>
+                  <td className="py-3 pr-4">{new Date(account.createdAt).toLocaleDateString()}</td>
                   {canEditAccount ? (
-                    <td className="px-3 py-3">
+                    <td className="py-3 pr-4">
                       <button
                         type="button"
                         onClick={() => openEdit(account)}
-                        className="rounded-lg border border-[#406089] bg-[#122339] px-3 py-1 text-xs font-semibold text-[#bfddff] transition-colors hover:bg-[#1b3452]"
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
                       >
                         Edit
                       </button>
@@ -436,61 +403,72 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
       </div>
 
       {editingAccount ? (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/55" onClick={closeEdit} />
-          <section
-            className={`relative z-10 w-full max-w-md rounded-2xl border p-5 backdrop-blur-xl ${
-              isDark ? "border-[#2a4450] bg-[#081822]/95" : "border-[#b8d2ce] bg-[#f9fffd]/95"
-            }`}
-          >
-            <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className={`absolute inset-0 backdrop-blur-sm ${isDark ? "bg-black/60" : "bg-[#0F172A]/20"}`} onClick={closeEdit} />
+          <section className={`glass-panel relative z-10 w-full max-w-md rounded-2xl p-6 ${isDark ? "" : "shadow-xl border-[#E2E8F0] bg-[#FFFFFF]"}`}>
+            <div className="mb-6 flex items-start justify-between gap-3">
               <div>
-                <p className={`text-xs uppercase tracking-[0.22em] ${isDark ? "text-[#8bc6c0]" : "text-[#317a72]"}`}>
+                <p className={`text-[10px] font-bold uppercase tracking-[0.25em] ${isDark ? "text-[#B6FF00]" : "text-[#10B981]"}`}>
                   Edit Account Status
                 </p>
-                <h3 className={`mt-1 text-xl font-bold ${heading}`}>{editingAccount.accountNumber}</h3>
+                <h3 className={`mt-1 text-xl font-bold font-mono ${isDark ? "text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]" : "text-[#0F172A]"}`}>{editingAccount.accountNumber}</h3>
               </div>
               <button
                 type="button"
                 onClick={closeEdit}
-                className={`rounded-lg border px-2.5 py-1 text-sm ${
-                  isDark ? "border-[#35535b] text-[#b9d9d4]" : "border-[#a8c9c4] text-[#2b6460]"
-                }`}
+                className={`rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
               >
                 Close
               </button>
             </div>
 
-            <form onSubmit={saveEdit} className="space-y-3">
-              <select
-                value={editStatus}
-                onChange={(event) => setEditStatus(event.target.value as AccountStatus)}
-                className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-              >
-                {STATUS_FILTERS.filter((status) => status !== "All").map((status) => (
-                  <option key={status} value={status}>
-                    {status}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min="1"
-                placeholder="Branch ID"
-                value={editingAccount.branchId}
-                onChange={(event) =>
-                  setEditingAccount((prev) =>
-                    prev ? { ...prev, branchId: Number(event.target.value) } : prev
-                  )
-                }
-                className={`rounded-xl border p-3 text-sm outline-none ${field}`}
-              />
-              <button
-                type="submit"
-                className="rounded-xl bg-[#2dc7b8] px-4 py-3 text-sm font-semibold text-[#03272b] transition-colors hover:bg-[#43ded0]"
-              >
-                Save Status
-              </button>
+            <form onSubmit={saveEdit} className="space-y-4">
+              <div>
+                <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Status</label>
+                <select
+                  value={editStatus}
+                  onChange={(event) => setEditStatus(event.target.value as AccountStatus)}
+                  className="glass-input w-full rounded-xl p-3 text-sm"
+                >
+                  {STATUS_FILTERS.filter((status) => status !== "All").map((status) => (
+                    <option key={status} value={status} className={isDark ? "bg-[#040b10]" : "bg-white"}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className={`mb-1.5 block text-[10px] font-bold uppercase tracking-[0.2em] ${isDark ? "text-[#9eb4b0]" : "text-[#64748B]"}`}>Branch ID</label>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Branch ID"
+                  value={editingAccount.branchId}
+                  onChange={(event) =>
+                    setEditingAccount((prev) =>
+                      prev ? { ...prev, branchId: Number(event.target.value) } : prev
+                    )
+                  }
+                  className="glass-input w-full rounded-xl p-3 text-sm"
+                />
+              </div>
+
+              <div className={`mt-8 flex justify-end gap-3 pt-4 border-t ${isDark ? "border-white/5" : "border-[#E2E8F0]"}`}>
+                <button
+                  type="button"
+                  onClick={closeEdit}
+                  className={`rounded-xl border px-5 py-2.5 text-sm font-semibold transition-colors ${isDark ? "border-white/10 bg-white/5 text-white hover:bg-white/10" : "border-[#E2E8F0] bg-white text-[#0F172A] hover:bg-[#F8FAFC]"}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="glass-button rounded-xl px-5 py-2.5 text-sm font-bold tracking-wide"
+                >
+                  Save Status
+                </button>
+              </div>
             </form>
           </section>
         </div>
