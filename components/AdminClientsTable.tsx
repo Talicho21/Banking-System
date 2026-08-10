@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useToast, ToastContainer } from "@/components/Toast";
 import { useTheme } from "next-themes";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/Pagination";
 
 type CategoryFilter = "All" | "Individual" | "Non-Individual";
 type StatusFilter = "All" | "Active" | "Inactive" | "Suspended";
@@ -74,6 +76,8 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
   const [editForm, setEditForm] = useState<EditFormState | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const { toasts, success: toastSuccess, error: toastError, dismiss } = useToast();
+
+  const pagination = usePagination(clients, 10, [category, status, search]);
 
   const fetchClients = async () => {
     setLoading(true);
@@ -328,14 +332,14 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
                     Loading clients...
                   </td>
                 </tr>
-              ) : clients.length === 0 ? (
+              ) : pagination.currentData.length === 0 ? (
                 <tr>
                   <td className="py-6 text-center text-xs opacity-60" colSpan={7}>
                     No clients found for your selection.
                   </td>
                 </tr>
               ) : (
-                clients.map((client) => {
+                pagination.currentData.map((client) => {
                   const displayName =
                     client.clientCategory === "Individual"
                       ? `${client.firstName ?? ""} ${client.lastName ?? ""}`.trim()
@@ -403,6 +407,7 @@ export default function AdminClientsTable({ theme }: AdminClientsTableProps) {
               )}
             </tbody>
           </table>
+          <Pagination {...pagination} />
         </div>
       </section>
 

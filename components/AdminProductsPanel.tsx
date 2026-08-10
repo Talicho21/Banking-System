@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Edit } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useToast, ToastContainer } from "@/components/Toast";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/Pagination";
 
 type Product = {
   productId: number;
@@ -63,6 +65,8 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
     expiryDate: "",
     minimumBalance: "0",
   });
+
+  const pagination = usePagination(products, 10, []);
 
 
   const loadProducts = async () => {
@@ -380,7 +384,7 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
                 </td>
               </tr>
             ) : (
-              products.map((product) => (
+              pagination.currentData.map((product) => (
                 <tr key={product.productId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
                   <td className={`py-3 pr-4 font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{product.productName}</td>
                   <td className="py-3 pr-4">
@@ -418,6 +422,7 @@ export default function AdminProductsPanel({ theme, onProductCreated }: AdminPro
             )}
           </tbody>
         </table>
+        <Pagination {...pagination} />
       </div>
 
       {editingProduct && editForm ? (

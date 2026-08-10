@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useToast, ToastContainer } from "@/components/Toast";
 import { useTheme } from "next-themes";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/Pagination";
+import { useToast, ToastContainer } from "@/components/Toast";
 
 type Role = {
   roleId: number;
@@ -75,6 +77,9 @@ export default function AdminSecurityPanel({ theme }: AdminSecurityPanelProps) {
   const [resetPasswordValue, setResetPasswordValue] = useState("");
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([]);
   const [savingRolePermissions, setSavingRolePermissions] = useState(false);
+
+  const rolesPagination = usePagination(roles, 10, []);
+  const usersPagination = usePagination(users, 10, []);
 
 
   const loadAll = async () => {
@@ -483,7 +488,7 @@ export default function AdminSecurityPanel({ theme }: AdminSecurityPanelProps) {
                     </td>
                   </tr>
                 ) : (
-                  roles.map((role) => (
+                  rolesPagination.currentData.map((role) => (
                     <tr key={role.roleId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
                       <td className={`p-3 font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{role.roleName}</td>
                       <td className="p-3">{role.description ?? "-"}</td>
@@ -506,6 +511,7 @@ export default function AdminSecurityPanel({ theme }: AdminSecurityPanelProps) {
                 )}
               </tbody>
             </table>
+            <Pagination {...rolesPagination} />
           </div>
         </div>
 
@@ -577,7 +583,7 @@ export default function AdminSecurityPanel({ theme }: AdminSecurityPanelProps) {
                     </td>
                   </tr>
                 ) : (
-                  users.map((user) => (
+                  usersPagination.currentData.map((user) => (
                     <tr key={user.userId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
                       <td className="p-3">
                         <span className={`font-medium ${isDark ? "text-white" : "text-[#0F172A]"}`}>{user.username}</span>
@@ -608,6 +614,7 @@ export default function AdminSecurityPanel({ theme }: AdminSecurityPanelProps) {
                 )}
               </tbody>
             </table>
+            <Pagination {...usersPagination} />
           </div>
         </div>
       </div>

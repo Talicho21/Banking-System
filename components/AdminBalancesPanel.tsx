@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import { useToast, ToastContainer } from "@/components/Toast";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/Pagination";
 
 type Product = {
   productId: number;
@@ -61,6 +63,8 @@ export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
   const tableBody = isDark ? "text-[#d9efeb]" : "text-[#475569]";
   const tableRow = isDark ? "border-[#14262d] hover:bg-white/5 transition-colors" : "border-[#E2E8F0] hover:bg-[#F8FAFC] transition-colors";
   const emptyText = isDark ? "text-[#9db8b4]" : "text-[#64748B]";
+
+  const pagination = usePagination(accounts, 10, [statusFilter, productFilter, search]);
 
   const loadProducts = async () => {
     setLoadingProducts(true);
@@ -218,7 +222,7 @@ export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
                 </td>
               </tr>
             ) : (
-              accounts.map((account) => (
+              pagination.currentData.map((account) => (
                 <tr key={account.accountId} className={`border-b last:border-0 ${tableRow}`}>
                   <td className={`px-3 py-3 font-mono ${isDark ? "text-[#d9ece9]" : "text-[#0F172A]"}`}>{account.accountNumber}</td>
                   <td className="px-3 py-3">#{account.clientId}</td>
@@ -236,6 +240,7 @@ export default function AdminBalancesPanel({ theme }: AdminBalancesPanelProps) {
             )}
           </tbody>
         </table>
+        <Pagination {...pagination} />
       </div>
     </section>
   );

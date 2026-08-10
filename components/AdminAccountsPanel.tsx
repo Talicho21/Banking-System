@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useToast, ToastContainer } from "@/components/Toast";
 import { useTheme } from "next-themes";
 import { useSecurity } from "@/components/SecurityContext";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/Pagination";
 
 type Product = {
   productId: number;
@@ -84,6 +86,8 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
   const tableBody = isDark ? "text-[#d9efeb]" : "text-[#475569]";
   const tableRow = isDark ? "border-[#14262d]" : "border-[#E2E8F0] hover:bg-[#F8FAFC]";
   const emptyText = isDark ? "text-[#9db8b4]" : "text-[#64748B]";
+
+  const pagination = usePagination(accounts, 10, [statusFilter, productFilter, search, refreshKey]);
 
   const loadProducts = async () => {
     setLoadingProducts(true);
@@ -369,7 +373,7 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
                 </td>
               </tr>
             ) : (
-              accounts.map((account) => (
+              pagination.currentData.map((account) => (
                 <tr key={account.accountId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
                   <td className={`py-3 pr-4 font-mono ${isDark ? "text-[#d9ece9]" : "text-[#0F172A]"}`}>{account.accountNumber}</td>
                   <td className="py-3 pr-4">#{account.clientId}</td>
@@ -400,6 +404,7 @@ export default function AdminAccountsPanel({ theme, refreshKey }: AdminAccountsP
             )}
           </tbody>
         </table>
+        <Pagination {...pagination} />
       </div>
 
       {editingAccount ? (

@@ -5,6 +5,8 @@ import { useToast, ToastContainer } from "@/components/Toast";
 import { useSecurity } from "@/components/SecurityContext";
 import { useTheme } from "next-themes";
 import { GState, jsPDF } from "jspdf";
+import { usePagination } from "@/hooks/usePagination";
+import { Pagination } from "@/components/Pagination";
 
 type TransactionRow = {
   transactionId: number;
@@ -120,6 +122,9 @@ export default function AdminTransactionsPanel({ theme }: AdminTransactionsPanel
     amount: "",
     reference: "",
   });
+
+  const pagination = usePagination(transactions, 10, [typeFilter, accountFilter, startDate, endDate]);
+  const approvalsPagination = usePagination(approvals, 10, []);
 
   const panel = isDark ? "border-[#1f2d32] bg-[#08171d]/85" : "border-[#E2E8F0] bg-[#FFFFFF]";
   const heading = isDark ? "text-[#f2fffd]" : "text-[#0F172A]";
@@ -716,7 +721,7 @@ export default function AdminTransactionsPanel({ theme }: AdminTransactionsPanel
                     </td>
                   </tr>
                 ) : (
-                  approvals.map((approval) => (
+                  approvalsPagination.currentData.map((approval) => (
                     <tr key={approval.approvalId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
                       <td className="p-3">{new Date(approval.createdAt).toLocaleDateString()}</td>
                       <td className="p-3">
@@ -753,6 +758,7 @@ export default function AdminTransactionsPanel({ theme }: AdminTransactionsPanel
                 )}
               </tbody>
             </table>
+            <Pagination {...approvalsPagination} />
           </div>
         </div>
       ) : null}
@@ -850,7 +856,7 @@ export default function AdminTransactionsPanel({ theme }: AdminTransactionsPanel
                 </td>
               </tr>
             ) : (
-              transactions.map((transaction) => (
+              pagination.currentData.map((transaction) => (
                 <tr key={transaction.transactionId} className={`border-b last:border-0 transition-colors ${isDark ? "border-white/5 hover:bg-white/5" : "border-[#E2E8F0] hover:bg-[#F8FAFC]"}`}>
                   <td className="py-3 pr-4">{new Date(transaction.createdAt).toLocaleString()}</td>
                   <td className="py-3 pr-4">
@@ -875,6 +881,7 @@ export default function AdminTransactionsPanel({ theme }: AdminTransactionsPanel
             )}
           </tbody>
         </table>
+        <Pagination {...pagination} />
       </div>
     </section>
   );
